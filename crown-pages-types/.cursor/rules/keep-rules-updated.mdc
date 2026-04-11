@@ -1,0 +1,20 @@
+---
+description: When to update the Cursor rules in this repo
+alwaysApply: true
+---
+
+# Keep Rules Updated
+
+Update `types-workflow.mdc` in the same session whenever any of these change:
+
+| Change Made | What to Update in types-workflow.mdc |
+|-------------|--------------------------------------|
+| New section type added | Add to "Current Section Types" list |
+| Section type removed or deprecated | Remove from list, note deprecation |
+| `linksWithContact` fully migrated and removed | Remove from list |
+| Build process changes (`tsconfig`, output dir, etc.) | Update "Making Changes" section |
+| Install method changes (GitHub → npm or other) | Update "Package Distribution" section |
+| `SCHEMA_VERSION` bumped | Update version references |
+| New field type added (`FieldDefinition`) | Update "Section Definition Structure" section |
+
+Also update **`pages-mobile/.cursor/rules/section-development.mdc`** and **`pages/.cursor/rules/section-components.mdc`** whenever section types are added or removed — those rules list section types too.

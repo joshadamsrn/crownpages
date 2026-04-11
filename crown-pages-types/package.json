@@ -1,0 +1,25 @@
+{
+  "name": "@crown-pages/types",
+  "version": "1.0.0",
+  "description": "Shared types for CrownPages web and mobile applications",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "crown-pages",
+    "types"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 
