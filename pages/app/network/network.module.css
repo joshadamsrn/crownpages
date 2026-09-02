@@ -382,6 +382,24 @@
   box-shadow: 0 22px 44px rgba(52, 62, 56, 0.12);
 }
 
+.card:focus-within {
+  border-color: rgba(139, 101, 30, 0.56);
+  box-shadow:
+    0 0 0 3px rgba(242, 189, 82, 0.28),
+    0 22px 44px rgba(52, 62, 56, 0.12);
+}
+
+.cardClickTarget {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardClickTarget:focus-visible {
+  outline: none;
+}
+
 .cardImageWrap {
   position: relative;
   aspect-ratio: 16 / 10;
