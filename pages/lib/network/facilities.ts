@@ -318,7 +318,7 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
     typeof filters.priceMax === "number" && filters.priceMax >= 0 ? filters.priceMax : null;
   const insurance = filters.insurance?.trim().toLowerCase() || "";
   const resolvedQueryLocation = queryText
-    ? resolveNetworkSearchLocation(queryText, filters.state?.trim() || "", facilities)
+    ? await resolveNetworkSearchLocation(queryText, filters.state?.trim() || "", facilities)
     : null;
   const searchLocation = radiusMiles ? resolvedQueryLocation : null;
   const locationStatus = radiusMiles
@@ -446,6 +446,20 @@ export async function getNetworkStates() {
   return Array.from(
     new Set(facilities.map((facility) => facility.state).filter((state): state is string => Boolean(state))),
   ).sort((a, b) => a.localeCompare(b));
+}
+
+export async function getNetworkLocationOptions() {
+  const facilities = await getAllImportedFacilities();
+  const options = new Map<string, string>();
+
+  for (const facility of facilities) {
+    const city = facility.city?.trim();
+    const state = facility.state?.trim();
+    if (!city || !state) continue;
+    options.set(`${city.toLowerCase()}|${state.toLowerCase()}`, `${city}, ${state}`);
+  }
+
+  return Array.from(options.values()).sort((a, b) => a.localeCompare(b));
 }
 
 export async function getNetworkInsuranceOptions() {

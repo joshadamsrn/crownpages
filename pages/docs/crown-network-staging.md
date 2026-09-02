@@ -20,6 +20,8 @@ SUPABASE_SERVICE_ROLE_KEY=<staging service-role key>
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NETWORK_REFERRALS_ENABLED=true
 NETWORK_REFERRALS_EMAIL_ENABLED=false
+# Optional: enables nationwide U.S. city resolution through Places API (New).
+GOOGLE_PLACES_API_KEY=<restricted server API key>
 ```
 
 Restart the Next.js development server after changing these values.
@@ -69,6 +71,13 @@ public price, and accepted-insurance filtering. A family can enter a five-digit 
 with a state and then choose a 5, 10, 25, 50, or 100 mile radius. Results use
 stored facility coordinates when present, fall back to the facility ZIP
 centroid, and sort nearest-first when distance is active.
+
+City inputs first resolve against the ZIP dataset and the locations of active
+Crown Network facilities. This facility-backed fallback recognizes cities such
+as Murray, Utah even when the ZIP dataset uses a different USPS preferred city.
+When `GOOGLE_PLACES_API_KEY` is configured, unresolved U.S. cities fall back to
+Google Places API (New). The key should be restricted to Places API (New) and
+stored only as a server environment variable.
 
 The family-facing price control is a single maximum monthly budget. It compares
 that budget with `network_facilities.price_low` (falling back to `price_high`

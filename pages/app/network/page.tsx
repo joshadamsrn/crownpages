@@ -4,6 +4,7 @@ import { FacilityCard } from "@/components/network/facility-card";
 import { NetworkSearchForm } from "@/components/network/network-search-form";
 import {
   getNetworkInsuranceOptions,
+  getNetworkLocationOptions,
   getNetworkStates,
   searchNetworkFacilities,
 } from "@/lib/network/facilities";
@@ -47,7 +48,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
   const usesInsurance = isNetworkInsuranceCareType(careType);
   const priceMax = usesInsurance ? undefined : getNumberParam(params, "priceMax", 1_000_000);
   const insurance = usesInsurance ? getParam(params, "insurance") : "";
-  const [{ facilities, total, location }, states, insuranceOptions] = await Promise.all([
+  const [{ facilities, total, location }, states, insuranceOptions, locationOptions] = await Promise.all([
     searchNetworkFacilities({
       query,
       careType,
@@ -59,6 +60,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
     }),
     getNetworkStates(),
     getNetworkInsuranceOptions(),
+    getNetworkLocationOptions(),
   ]);
   const hasFilters = Boolean(
     query || careType || state || radiusMiles || priceMax !== undefined || insurance,
@@ -94,6 +96,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
           careType={careType}
           insurance={insurance}
           insuranceOptions={insuranceOptions}
+          locationOptions={locationOptions}
           priceMax={priceMax}
           query={query}
           radiusMiles={radiusMiles}

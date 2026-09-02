@@ -17,6 +17,7 @@ type Props = {
   priceMax?: number;
   insurance: string;
   insuranceOptions: string[];
+  locationOptions: string[];
 };
 
 export function NetworkSearchForm({
@@ -28,6 +29,7 @@ export function NetworkSearchForm({
   priceMax,
   insurance,
   insuranceOptions,
+  locationOptions,
 }: Props) {
   const [selectedCareType, setSelectedCareType] = useState(careType);
   const usesInsurance = isNetworkInsuranceCareType(selectedCareType);
@@ -42,10 +44,16 @@ export function NetworkSearchForm({
             <input
               className={styles.searchInput}
               defaultValue={query}
+              list="network-location-options"
               name="q"
               placeholder="City, ZIP code, or provider name"
               type="search"
             />
+            <datalist id="network-location-options">
+              {locationOptions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
           </span>
         </label>
 

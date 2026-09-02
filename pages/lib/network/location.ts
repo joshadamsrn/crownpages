@@ -1,6 +1,7 @@
 import "server-only";
 
 import zipcodesUs from "zipcodes-us";
+import { resolveGooglePlacesCity } from "@/lib/network/google-places";
 
 type Coordinates = {
   latitude: number;
@@ -65,11 +66,42 @@ function resolveCity(city: string, state: string): ResolvedNetworkLocation | nul
   };
 }
 
-export function resolveNetworkSearchLocation(
+function resolveFacilityBackedCity(
+  city: string,
+  state: string,
+  facilities: FacilityLocation[],
+): ResolvedNetworkLocation | null {
+  const stateCode = getStateCode(state);
+  if (!stateCode) return null;
+
+  const matchingFacilities = facilities.filter(
+    (facility) =>
+      normalize(facility.city) === normalize(city) &&
+      getStateCode(facility.state) === stateCode,
+  );
+  const coordinates = averageCoordinates(
+    matchingFacilities
+      .map((facility) => resolveFacilityCoordinates(facility))
+      .filter((location): location is Coordinates => Boolean(location)),
+  );
+  if (!coordinates) return null;
+
+  const canonicalCity = matchingFacilities.find((facility) => facility.city)?.city || city.trim();
+  return {
+    ...coordinates,
+    label: `${canonicalCity}, ${stateCode}`,
+    kind: "city",
+    city: canonicalCity,
+    stateCode,
+    zipCode: null,
+  };
+}
+
+export async function resolveNetworkSearchLocation(
   query: string,
   selectedState: string,
   facilities: FacilityLocation[],
-): ResolvedNetworkLocation | null {
+): Promise<ResolvedNetworkLocation | null> {
   const trimmedQuery = query.trim();
   const zipMatch = trimmedQuery.match(/^([0-9]{5})(?:-[0-9]{4})?$/);
   if (zipMatch) {
@@ -100,7 +132,27 @@ export function resolveNetworkSearchLocation(
     if (matchingStates.size === 1) state = Array.from(matchingStates)[0];
   }
 
-  return state ? resolveCity(cityPart, state) : null;
+  if (state) {
+    const localLocation =
+      resolveCity(cityPart, state) || resolveFacilityBackedCity(cityPart, state, facilities);
+    if (localLocation) return localLocation;
+  }
+
+  const googleLocation = await resolveGooglePlacesCity(cityPart, state);
+  if (!googleLocation) return null;
+
+  const selectedStateCode = getStateCode(state);
+  if (selectedStateCode && googleLocation.stateCode !== selectedStateCode) return null;
+
+  return {
+    latitude: googleLocation.latitude,
+    longitude: googleLocation.longitude,
+    label: `${googleLocation.city}, ${googleLocation.stateCode}`,
+    kind: "city",
+    city: googleLocation.city,
+    stateCode: googleLocation.stateCode,
+    zipCode: null,
+  };
 }
 
 export function matchesResolvedNetworkLocation(
