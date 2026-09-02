@@ -20,6 +20,7 @@ import {
   NETWORK_COMPENSATION_DISCLOSURE,
   NETWORK_REFERRAL_DISCLOSURE_VERSION,
 } from "@/lib/network/consent";
+import { NETWORK_CARE_TYPES, isNetworkInsuranceOnlyCareTypes } from "@/lib/network/types";
 import styles from "@/app/network/network.module.css";
 
 export type IntakeFacilityOption = {
@@ -58,7 +59,7 @@ type IntakeState = {
   company: string;
 };
 
-const CARE_TYPES = ["Independent Living", "Assisted Living", "Memory Care"];
+const CARE_TYPES = [...NETWORK_CARE_TYPES];
 const SUPPORT_NEEDS = [
   "Walking or transfers",
   "Bathing or dressing",
@@ -133,10 +134,12 @@ export function FamilyIntakeForm({
   facilities,
   initialFacilityId,
   previewMode,
+  referralSource,
 }: {
   facilities: IntakeFacilityOption[];
   initialFacilityId?: string;
   previewMode: boolean;
+  referralSource?: "network_profile";
 }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<IntakeState>(() => {
@@ -145,7 +148,9 @@ export function FamilyIntakeForm({
       ...EMPTY_STATE,
       desiredCity: initialFacility?.city || "",
       desiredState: initialFacility?.state || "",
-      careTypes: initialFacility?.careTypes.filter((careType) => CARE_TYPES.includes(careType)) || [],
+      careTypes: initialFacility?.careTypes.filter((careType) =>
+        (CARE_TYPES as readonly string[]).includes(careType),
+      ) || [],
       facilityIds: initialFacility ? [initialFacility.id] : [],
     };
   });
@@ -174,12 +179,14 @@ export function FamilyIntakeForm({
   const sharingDisclosure = buildNetworkSharingDisclosure(
     selectedFacilities.map((facility) => facility.name),
   );
+  const insuranceCoveredRequest = isNetworkInsuranceOnlyCareTypes(form.careTypes);
 
   const update = <K extends keyof IntakeState>(key: K, value: IntakeState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
   };
 
   const toggleFacility = (facilityId: string) => {
+    if (referralSource === "network_profile" && facilityId === initialFacilityId) return;
     setForm((current) => {
       const facilityIds = toggleValue(current.facilityIds, facilityId, 3);
       return {
@@ -252,7 +259,7 @@ export function FamilyIntakeForm({
 
     setSubmitting(true);
     setError(null);
-    const budget = getBudgetValues(form.budgetRange);
+    const budget = getBudgetValues(insuranceCoveredRequest ? "" : form.budgetRange);
     const payload = {
       ...form,
       ...budget,
@@ -264,6 +271,8 @@ export function FamilyIntakeForm({
         NETWORK_COMPENSATION_DISCLOSURE,
         NETWORK_COMMUNICATION_DISCLOSURE,
       ].join("\n\n"),
+      referralSource: referralSource || null,
+      sourceFacilityId: referralSource === "network_profile" ? initialFacilityId || null : null,
     };
 
     if (previewMode) {
@@ -301,7 +310,9 @@ export function FamilyIntakeForm({
         <p>
           {result.preview
             ? "Nothing you entered was transmitted or saved. When referrals are enabled, this confirmation will include live provider delivery and status tracking."
-            : "Crown Network will review your request and coordinate next steps with the providers you selected."}
+            : referralSource === "network_profile"
+              ? "Your Crown Referral was documented and routed to the selected provider for secure follow-up."
+              : "Crown Network will review your request and coordinate next steps with the providers you selected."}
         </p>
         <div className={styles.referenceNumber}>Reference: {result.referralId}</div>
         <Link className={styles.primaryAction} href="/network">
@@ -447,16 +458,26 @@ export function FamilyIntakeForm({
               </div>
             </fieldset>
 
-            <label className={styles.formLabel}>
-              Approximate monthly private-pay budget
-              <select value={form.budgetRange} onChange={(event) => update("budgetRange", event.target.value)}>
-                <option value="">Not sure yet</option>
-                <option value="under-3000">Under $3,000</option>
-                <option value="3000-5000">$3,000–$5,000</option>
-                <option value="5000-7000">$5,000–$7,000</option>
-                <option value="7000-plus">$7,000+</option>
-              </select>
-            </label>
+            {insuranceCoveredRequest ? (
+              <div className={styles.previewNotice}>
+                <ShieldCheck aria-hidden="true" />
+                <div>
+                  <strong>Insurance-covered care</strong>
+                  <span>No private-pay budget is needed. The provider will confirm coverage and benefits.</span>
+                </div>
+              </div>
+            ) : (
+              <label className={styles.formLabel}>
+                Approximate monthly private-pay budget
+                <select value={form.budgetRange} onChange={(event) => update("budgetRange", event.target.value)}>
+                  <option value="">Not sure yet</option>
+                  <option value="under-3000">Under $3,000</option>
+                  <option value="3000-5000">$3,000–$5,000</option>
+                  <option value="5000-7000">$5,000–$7,000</option>
+                  <option value="7000-plus">$7,000+</option>
+                </select>
+              </label>
+            )}
 
             <label className={styles.formLabel}>
               Anything else that would help with matching? <span>(optional)</span>
@@ -542,7 +563,8 @@ export function FamilyIntakeForm({
             <div className={styles.facilityPicker}>
               {visibleFacilities.map((facility) => {
                 const selected = form.facilityIds.includes(facility.id);
-                const disabled = !selected && form.facilityIds.length >= 3;
+                const locked = referralSource === "network_profile" && facility.id === initialFacilityId;
+                const disabled = locked || (!selected && form.facilityIds.length >= 3);
                 return (
                   <label className={selected ? styles.facilityOptionSelected : styles.facilityOption} key={facility.id}>
                     <input
@@ -554,6 +576,7 @@ export function FamilyIntakeForm({
                     <span>
                       <strong>{facility.name}</strong>
                       <small><MapPin aria-hidden="true" /> {[facility.city, facility.state].filter(Boolean).join(", ")}</small>
+                      {locked ? <small>Selected from this Crown Network profile</small> : null}
                     </span>
                   </label>
                 );

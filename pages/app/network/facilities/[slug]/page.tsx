@@ -49,7 +49,7 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
 
   const location = [facility.city, facility.state, facility.zipCode].filter(Boolean).join(", ");
   const address = [facility.streetAddress, location].filter(Boolean).join(", ");
-  const legacyProfilePath = `/${facility.businessSlug}/${facility.pageSlug}`;
+  const referralSafeProfilePath = `/${facility.businessSlug}/${facility.pageSlug}1`;
 
   return (
     <main className={styles.detailMain}>
@@ -131,7 +131,7 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
               Connect for Free
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
-            <Link className={styles.secondaryAction} href={legacyProfilePath}>
+            <Link className={styles.secondaryAction} href={referralSafeProfilePath}>
               View full profile
               <ExternalLink size={16} aria-hidden="true" />
             </Link>

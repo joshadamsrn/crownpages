@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import {
   CalendarDays,
   CheckCircle2,
@@ -33,6 +34,7 @@ interface PageEngagementActionsProps {
   includeInstaConnect: boolean;
   includeScheduleMeeting: boolean;
   forceMobileLayout?: boolean;
+  referralSafeHref?: string;
 }
 
 interface ConnectRequestModalProps {
@@ -251,6 +253,26 @@ function ActionButton({
         {label}
       </span>
     </button>
+  );
+}
+
+function ReferralActionLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        borderColor: '#0f4fb3',
+        background: 'linear-gradient(180deg, #ffffff 0%, #edf4ff 100%)',
+      }}
+      className="flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full border-2 px-4 py-3 text-left shadow-[0_1px_6px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_6px_14px_rgba(15,23,42,0.10)] md:w-auto md:min-w-[210px]"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#0f4fb3]">
+        <Handshake className="block" />
+      </span>
+      <span className="min-w-0 text-[15px] font-semibold leading-none text-[#1b2431]">
+        Connect
+      </span>
+    </Link>
   );
 }
 
@@ -676,6 +698,7 @@ export function PageEngagementActions({
   includeInstaConnect,
   includeScheduleMeeting,
   forceMobileLayout = false,
+  referralSafeHref,
 }: PageEngagementActionsProps) {
   const activeModalBodyRef = useRef<HTMLFormElement | null>(null);
   const [activeModal, setActiveModal] = useState<'connect' | 'schedule' | null>(null);
@@ -703,7 +726,7 @@ export function PageEngagementActions({
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : 'America/Denver';
   const meetingSlots = useMemo(() => buildMeetingSlots(), []);
-  const hasButtons = includeInstaConnect || includeScheduleMeeting;
+  const hasButtons = Boolean(referralSafeHref) || includeInstaConnect || includeScheduleMeeting;
   const buttonCount = Number(includeInstaConnect) + Number(includeScheduleMeeting);
 
   useEffect(() => {
@@ -895,7 +918,8 @@ export function PageEngagementActions({
               : "grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4"
           }
         >
-          {includeInstaConnect && (
+          {referralSafeHref ? <ReferralActionLink href={referralSafeHref} /> : null}
+          {!referralSafeHref && includeInstaConnect && (
             <ActionButton
               fullWidth={buttonCount > 1}
               icon={Handshake}
@@ -903,7 +927,7 @@ export function PageEngagementActions({
               onClick={() => setActiveModal('connect')}
             />
           )}
-          {includeScheduleMeeting && (
+          {!referralSafeHref && includeScheduleMeeting && (
             <ActionButton
               fullWidth={buttonCount > 1}
               icon={CalendarDays}

@@ -7,7 +7,6 @@ import {
   PageContent,
 } from "@/components/enhanced-page-renderer";
 import { Analytics } from "@/components/analytics";
-import { SavePageButton } from "@/components/save-page-button";
 
 import type { Database } from "@/database.types";
 import { SectionStyles } from "@/types";
@@ -23,6 +22,88 @@ type PageData = Database["public"]["Tables"]["pages"]["Row"] & {
 interface PageProps {
   params: Promise<{ slug: string; business_slug: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+const REFERRAL_SAFE_SUFFIX = "1";
+const REFERRAL_SAFE_HIDDEN_SECTIONS = new Set([
+  "contact",
+  "contactCard",
+  "cta",
+  "links",
+  "medicalProvider",
+  "multiContact",
+  "pages",
+  "personalContact",
+  "socialLinks",
+]);
+
+function getRequestedPageRoute(slug: string) {
+  const referralSafeMode = slug.length > 1 && slug.endsWith(REFERRAL_SAFE_SUFFIX);
+  return {
+    referralSafeMode,
+    pageSlug: referralSafeMode ? slug.slice(0, -REFERRAL_SAFE_SUFFIX.length) : slug,
+  };
+}
+
+function isReferralSafeAssetUrl(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return true;
+  if (!/^https?:/i.test(value)) return !/^(?:mailto|tel):/i.test(value);
+
+  try {
+    const url = new URL(value);
+    return url.pathname.includes("/storage/v1/object/");
+  } catch {
+    return false;
+  }
+}
+
+function getReferralSafeContent(content: unknown): PageContent {
+  const sections =
+    content && typeof content === "object" && !Array.isArray(content)
+      ? (content as { sections?: unknown }).sections
+      : null;
+  if (!Array.isArray(sections)) return { sections: [] };
+
+  return {
+    sections: sections.flatMap((candidate) => {
+      if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return [];
+      const section = candidate as PageContent["sections"][number];
+      if (REFERRAL_SAFE_HIDDEN_SECTIONS.has(section.type)) return [];
+
+      const data = section.data && typeof section.data === "object" ? { ...section.data } : {};
+      if (section.type === "hero") delete data.ctaButton;
+      if (section.type === "companyHeader") {
+        delete data.ctaText;
+        delete data.ctaLink;
+      }
+      if (section.type === "linksWithContact") {
+        for (const key of [
+          "contactButton",
+          "contactName",
+          "contactRole",
+          "contactPhone",
+          "contactPhone2",
+          "contactEmail",
+          "contactFax",
+          "contactWebsite",
+          "contactImageUrl",
+        ]) {
+          delete data[key];
+        }
+        if (Array.isArray(data.links)) {
+          data.links = data.links.filter((link) => {
+            if (!link || typeof link !== "object" || Array.isArray(link)) return false;
+            const value = link as { url?: unknown; mediaItems?: unknown };
+            return Array.isArray(value.mediaItems) && value.mediaItems.length > 0
+              ? true
+              : isReferralSafeAssetUrl(value.url);
+          });
+        }
+      }
+
+      return [{ ...section, data }];
+    }),
+  };
 }
 
 const getPageData = cache(async function getPageData(
@@ -76,11 +157,12 @@ export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { slug, business_slug } = await params;
+  const { pageSlug, referralSafeMode } = getRequestedPageRoute(slug);
   const searchParamsData = await searchParams;
   const isPreview = searchParamsData.preview === "true";
   const tenant = await getCurrentWhiteLabelTenant();
 
-  const pageData = await getPageData(slug, business_slug, isPreview);
+  const pageData = await getPageData(pageSlug, business_slug, isPreview);
 
   if (!pageData) {
     return {
@@ -135,15 +217,20 @@ export async function generateMetadata({
       description: ogDescription,
       images: [ogImage],
     },
+    robots: referralSafeMode ? { index: false, follow: false } : undefined,
+    alternates: referralSafeMode
+      ? { canonical: `/${business_slug}/${pageSlug}` }
+      : undefined,
   };
 }
 
 export default async function Page({ params, searchParams }: PageProps) {
   const { slug, business_slug } = await params;
+  const { pageSlug, referralSafeMode } = getRequestedPageRoute(slug);
   const searchParamsData = await searchParams;
   const isPreview = searchParamsData.preview === "true";
 
-  const pageData = await getPageData(slug, business_slug, isPreview);
+  const pageData = await getPageData(pageSlug, business_slug, isPreview);
   const supabase = await createClient();
   const {
     data: { user },
@@ -170,8 +257,20 @@ export default async function Page({ params, searchParams }: PageProps) {
     zip_code: null,
     country: null,
   };
-
-  const currentPath = `/${business_slug}/${slug}`;
+  const renderedBusiness = referralSafeMode
+    ? { ...business, email: null, phone: null, website: null }
+    : business;
+  const renderedContent = referralSafeMode
+    ? getReferralSafeContent(pageData.content)
+    : (pageData.content as unknown as PageContent);
+  const renderedPageData = referralSafeMode
+    ? {
+        ...pageData,
+        business: renderedBusiness,
+        content: renderedContent as unknown as PageData["content"],
+      }
+    : pageData;
+  const referralHref = `/network/get-help?facility=${encodeURIComponent(business_slug)}&source=network-profile`;
   const admin = createAdminClient();
   const { data: assistantSetting } = await admin
     .from("business_ai_assistant_settings")
@@ -190,13 +289,15 @@ export default async function Page({ params, searchParams }: PageProps) {
             fallback={<div className="min-h-screen bg-gray-50 animate-pulse" />}
           >
             <EnhancedPageRenderer
-              content={pageData.content as unknown as PageContent}
+              content={renderedContent}
               styles={pageData.styles as unknown as SectionStyles}
-              business={business}
-              pageData={pageData}
+              business={renderedBusiness}
+              pageData={renderedPageData}
               isPreview={isPreview}
+              referralSafeMode={referralSafeMode}
+              referralHref={referralHref}
             />
-            {!isPreview && assistantSetting?.enabled ? (
+            {!isPreview && !referralSafeMode && assistantSetting?.enabled ? (
               <PageAIAssistant
                 pageId={pageData.id}
                 businessName={business.name || pageData.title}

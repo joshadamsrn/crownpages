@@ -40,6 +40,8 @@ export type NetworkReferralSubmission = {
   compensationAcknowledged: boolean;
   sharingAccepted: boolean;
   company: string;
+  referralSource: "network_profile" | null;
+  sourceFacilityId: string | null;
 };
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -120,6 +122,10 @@ export function validateNetworkReferralSubmission(input: unknown):
     compensationAcknowledged: value.compensationAcknowledged === true,
     sharingAccepted: value.sharingAccepted === true,
     company: stringValue(value.company, 120),
+    referralSource: value.referralSource === "network_profile" ? "network_profile" : null,
+    sourceFacilityId: UUID_PATTERN.test(stringValue(value.sourceFacilityId, 40))
+      ? stringValue(value.sourceFacilityId, 40)
+      : null,
   };
 
   if (data.company) return { success: false, error: "Unable to submit this request." };
@@ -136,6 +142,12 @@ export function validateNetworkReferralSubmission(input: unknown):
   if (!data.moveTimeframe) return { success: false, error: "Select a move timeframe." };
   if (facilityIds.length < 1 || facilityIds.length > 3 || facilityIds.some((id) => !UUID_PATTERN.test(id))) {
     return { success: false, error: "Select between one and three valid facilities." };
+  }
+  if (
+    data.referralSource === "network_profile" &&
+    (!data.sourceFacilityId || !facilityIds.includes(data.sourceFacilityId))
+  ) {
+    return { success: false, error: "The originating Crown Network provider must remain selected." };
   }
   data.previouslyContactedFacilityIds = data.previouslyContactedFacilityIds.filter((id) =>
     facilityIds.includes(id),

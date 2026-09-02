@@ -72,6 +72,8 @@ interface EnhancedPageRendererProps {
   business: BusinessData | null;
   pageData: Database['public']['Tables']['pages']['Row'];
   isPreview?: boolean;
+  referralSafeMode?: boolean;
+  referralHref?: string;
 }
 
 // Local section definitions for sections not yet in @crown-pages/types
@@ -141,9 +143,11 @@ const getSectionComponent = (sectionType: string) => {
 const SEOHead = ({
   pageData,
   business,
+  referralSafeMode = false,
 }: {
   pageData: Database['public']['Tables']['pages']['Row'];
   business: BusinessData | null;
+  referralSafeMode?: boolean;
 }) => {
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
   const siteName = business?.name || 'Crown Pages';
@@ -168,7 +172,7 @@ const SEOHead = ({
       {/* Remove keywords section as it doesn't exist in database */}
 
       {/* Canonical URL */}
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+      {canonicalUrl && !referralSafeMode ? <link rel="canonical" href={canonicalUrl} /> : null}
 
       {/* Favicon */}
       {pageData.favicon_image_url && (
@@ -211,7 +215,7 @@ const SEOHead = ({
       )}
 
       {/* Additional SEO Tags */}
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={referralSafeMode ? "noindex, nofollow" : "index, follow"} />
       <meta name="author" content={business?.name || ''} />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta httpEquiv="Content-Language" content="en" />
@@ -281,6 +285,8 @@ export const EnhancedSectionRenderer = ({
   isPreview,
   companyHeaderAddress,
   contactCardData,
+  referralSafeMode,
+  referralHref,
 }: {
   section: SectionData;
   business: BusinessData;
@@ -294,6 +300,8 @@ export const EnhancedSectionRenderer = ({
   isPreview?: boolean;
   companyHeaderAddress?: string;
   contactCardData?: any;
+  referralSafeMode?: boolean;
+  referralHref?: string;
 }) => {
   // Render contactCard as a visible section
   // (Also keep data for modal compatibility)
@@ -462,6 +470,7 @@ export const EnhancedSectionRenderer = ({
   // Special handling for hero section to pass page URL and title
   const isHeroSection = section.type === 'hero';
   const isContactCardSection = section.type === 'contactCard';
+  const isLinksWithContactSection = section.type === 'linksWithContact';
 
   if (isPreview && section.type === 'gallery') {
     return (
@@ -482,8 +491,11 @@ export const EnhancedSectionRenderer = ({
     sectionId: section.id,
     styles,
     forceMobileLayout: isPreview,
-    ...(isHeroSection && { pageUrl, pageTitle, pageSlug, businessSlug, brochureSections, isPreview, companyHeaderAddress, contactCardData }),
+    ...(isHeroSection && { pageUrl, pageTitle, pageSlug, businessSlug, brochureSections, isPreview, companyHeaderAddress, contactCardData, referralSafeMode }),
     ...(isContactCardSection && { companyHeaderAddress }),
+    ...(isLinksWithContactSection && {
+      referralSafeHref: referralSafeMode ? referralHref : undefined,
+    }),
   };
 
   return (
@@ -506,6 +518,8 @@ export function EnhancedPageRenderer({
   business,
   pageData,
   isPreview = false,
+  referralSafeMode = false,
+  referralHref,
 }: EnhancedPageRendererProps) {
   const [contactModalVisible, setContactModalVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -626,7 +640,7 @@ export function EnhancedPageRenderer({
   if (!content?.sections || !Array.isArray(content.sections)) {
     return (
       <>
-        <SEOHead pageData={pageData} business={safeBusinessData} />
+        <SEOHead pageData={pageData} business={safeBusinessData} referralSafeMode={referralSafeMode} />
         <div
           className="min-h-screen flex items-center justify-center"
           style={{ backgroundColor: theme.surface }}
@@ -666,14 +680,17 @@ export function EnhancedPageRenderer({
   const pageFeatureSettings = getPageEngagementSettings(
     pageData.publish_settings as Record<string, unknown> | null | undefined
   );
+  const hasConfiguredLeadAction =
+    pageFeatureSettings.includeInstaConnect || pageFeatureSettings.includeScheduleMeeting;
   const showLeadActions =
-    pageSupportsLeadActions(content.sections) &&
-    (pageFeatureSettings.includeInstaConnect ||
-      pageFeatureSettings.includeScheduleMeeting);
+    hasConfiguredLeadAction &&
+    (referralSafeMode
+      ? content.sections.some((section) => section.type === 'companyHeader')
+      : pageSupportsLeadActions(content.sections));
 
   return (
     <>
-      <SEOHead pageData={pageData} business={safeBusinessData} />
+      <SEOHead pageData={pageData} business={safeBusinessData} referralSafeMode={referralSafeMode} />
       <ThemeContext.Provider value={theme}>
         <ContactModalContext.Provider value={contactModalContextValue}>
           <div
@@ -704,6 +721,8 @@ export function EnhancedPageRenderer({
                     isPreview={isPreview}
                     companyHeaderAddress={companyHeaderAddress}
                     contactCardData={contactCardData}
+                    referralSafeMode={referralSafeMode}
+                    referralHref={referralHref}
                   />
                   {showLeadActions && section.type === 'companyHeader' && (
                     <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-0">
@@ -713,6 +732,7 @@ export function EnhancedPageRenderer({
                         includeInstaConnect={pageFeatureSettings.includeInstaConnect}
                         includeScheduleMeeting={pageFeatureSettings.includeScheduleMeeting}
                         forceMobileLayout={isPreview}
+                        referralSafeHref={referralSafeMode ? referralHref : undefined}
                       />
                     </div>
                   )}
@@ -722,7 +742,7 @@ export function EnhancedPageRenderer({
           </div>
 
           {/* Contact Modal - rendered at top level with high z-index */}
-          {contactModalVisible && contactCardData ? (
+          {!referralSafeMode && contactModalVisible && contactCardData ? (
             <div
               className="fixed inset-0 flex items-end justify-center bg-black/50 z-[999999]"
               onClick={closeContactModal}

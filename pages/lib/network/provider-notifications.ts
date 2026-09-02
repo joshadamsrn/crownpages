@@ -42,7 +42,7 @@ export async function sendNetworkProviderReferralNotification({
 
   return sendEmailMessage({
     to,
-    subject: "A Crown Network referral is ready for secure review",
+    subject: "Crown Referral: a new family request is ready",
     text: [
       `A new Crown Network referral is available for ${facilityName}.`,
       "",

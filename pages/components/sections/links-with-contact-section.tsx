@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { BusinessData } from '@crown-pages/types';
 import { useTheme, useContactModal } from '../enhanced-page-renderer';
 import { TrackableButton } from '../trackable-button';
@@ -92,6 +93,7 @@ interface LinksWithContactSectionProps {
   pageTitle?: string;
   sectionId?: string;
   styles?: SectionStyles;
+  referralSafeHref?: string;
 }
 
 const getImageUrl = (path?: string) => {
@@ -171,7 +173,7 @@ const getIconComponent = (iconName?: string): LucideIcon => {
   return iconMap[lowerIconName] || LinkIcon;
 };
 
-export function LinksWithContactSection({ data, business, pageId, pageTitle, sectionId, styles }: LinksWithContactSectionProps) {
+export function LinksWithContactSection({ data, business, pageId, pageTitle, sectionId, styles, referralSafeHref }: LinksWithContactSectionProps) {
   const { title, links, contactButton, contactName, contactRole, contactPhone, contactPhone2, contactEmail, contactFax, contactWebsite, contactImageUrl } = data;
   const displayTitle = title && title.trim() !== '' ? title : 'Pages';
   const theme = useTheme();
@@ -230,6 +232,7 @@ export function LinksWithContactSection({ data, business, pageId, pageTitle, sec
   // Do NOT fall back to global contactCardData - that's for the header contact card
   const sectionContactData = directContactData || contactButton?.contactData;
   const showContactButton = (() => {
+    if (referralSafeHref) return true;
     // No section-specific contact data? Don't show button
     if (!sectionContactData || Object.keys(sectionContactData).length === 0) {
       return false;
@@ -555,22 +558,34 @@ export function LinksWithContactSection({ data, business, pageId, pageTitle, sec
           {/* Contact Button */}
           {showContactButton && (
             <div className="mt-6 mb-[20px] md:mb-2">
-              <button
-                onClick={handleContactClick}
-                className="w-full rounded-full px-6 py-4 text-lg font-semibold text-white shadow-[0_22px_44px_rgba(15,23,42,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
-                style={{
-                  background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
-                }}
-              >
-                Contact
-              </button>
+              {referralSafeHref ? (
+                <Link
+                  href={referralSafeHref}
+                  className="block w-full rounded-full px-6 py-4 text-center text-lg font-semibold text-white shadow-[0_22px_44px_rgba(15,23,42,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+                  }}
+                >
+                  Contact
+                </Link>
+              ) : (
+                <button
+                  onClick={handleContactClick}
+                  className="w-full rounded-full px-6 py-4 text-lg font-semibold text-white shadow-[0_22px_44px_rgba(15,23,42,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+                  style={{
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+                  }}
+                >
+                  Contact
+                </button>
+              )}
             </div>
           )}
         </div>
       </section>
 
       {/* Local Modal for section-specific contact data - ALWAYS RENDERED for smooth animations */}
-      {(useDirectFields || useOldApproach) && effectiveContactData ? (
+      {!referralSafeHref && (useDirectFields || useOldApproach) && effectiveContactData ? (
         <>
         {console.log('🔍 RENDERING LOCAL MODAL with data:', effectiveContactData, 'visible:', localModalVisible, 'animating:', isAnimatingIn)}
         <div
@@ -843,7 +858,7 @@ export function LinksWithContactSection({ data, business, pageId, pageTitle, sec
         </>
       ) : null}
 
-      {pageId && (
+      {pageId && !referralSafeHref && (
         <ConnectRequestModal
           isOpen={connectModalOpen}
           onClose={() => setConnectModalOpen(false)}

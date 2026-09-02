@@ -22,6 +22,8 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
   const params = await searchParams;
   const requestedSlugValue = params.facility;
   const requestedSlug = Array.isArray(requestedSlugValue) ? requestedSlugValue[0] : requestedSlugValue;
+  const requestedSourceValue = params.source;
+  const requestedSource = Array.isArray(requestedSourceValue) ? requestedSourceValue[0] : requestedSourceValue;
   const previewMode = !isNetworkReferralsEnabled();
   const [allFacilities, eligiblePageIds] = await Promise.all([
     getNetworkFacilities({ limit: 1000 }),
@@ -29,10 +31,7 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
   ]);
   const facilities = allFacilities
     .filter((facility) =>
-      (previewMode || eligiblePageIds?.has(facility.pageId))
-      && facility.careTypes.some((careType) =>
-          ["Independent Living", "Assisted Living", "Memory Care"].includes(careType),
-        ),
+      previewMode || eligiblePageIds?.has(facility.pageId),
     )
     .map<IntakeFacilityOption>((facility) => ({
       id: facility.id,
@@ -43,6 +42,9 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
       careTypes: facility.careTypes,
     }));
   const initialFacilityId = facilities.find((facility) => facility.slug === requestedSlug)?.id;
+  const referralSource = requestedSource === "network-profile" && initialFacilityId
+    ? "network_profile"
+    : undefined;
 
   if (!previewMode && facilities.length === 0) {
     return (
@@ -67,6 +69,7 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
         facilities={facilities}
         initialFacilityId={initialFacilityId}
         previewMode={previewMode}
+        referralSource={referralSource}
       />
     </main>
   );

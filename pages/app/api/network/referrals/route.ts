@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
 import { hasValidRequestOrigin } from "@/lib/network/request-origin";
+import { createNetworkProviderAccessToken } from "@/lib/network/provider-referral-access";
+import {
+  buildNetworkProviderAccessUrl,
+  sendNetworkProviderReferralNotification,
+} from "@/lib/network/provider-notifications";
 import {
   buildNetworkSharingDisclosure,
   NETWORK_COMMUNICATION_DISCLOSURE,
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
   const { data: eligibleFacilities, error: eligibleFacilitiesError } = await admin
     .from("network_facilities")
     .select(
-      "page_id,listing_status,referral_status,is_accepting_referrals,care_types,agreement_status,referral_fee_type,notification_email,agreement_effective_at,agreement_expires_at",
+      "id,page_id,listing_status,referral_status,is_accepting_referrals,care_types,agreement_status,referral_fee_type,notification_email,agreement_effective_at,agreement_expires_at",
     )
     .in("page_id", validation.data.facilityIds);
 
@@ -116,5 +121,116 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ referralId: data }, { status: 201 });
+  const automaticDelivery: Array<{
+    facilityPageId: string;
+    status: "sent" | "queued" | "pending_manual_delivery" | "failed";
+  }> = [];
+
+  if (validation.data.referralSource === "network_profile") {
+    const { error: sourceEventError } = await admin.from("network_referral_events").insert({
+      referral_id: data,
+      actor_user_id: user?.id || null,
+      actor_type: user ? "consumer" : "system",
+      event_type: "network_profile_referral_submitted",
+      details: {
+        sourceFacilityPageId: validation.data.sourceFacilityId,
+        selectedFacilityPageIds: validation.data.facilityIds,
+      },
+    });
+    if (sourceEventError) {
+      console.error("Unable to record Crown Network profile attribution", sourceEventError);
+    }
+
+    const { error: qualificationError } = await admin.rpc("operate_network_referral" as never, {
+      p_referral_id: data,
+      p_action: "qualify",
+      p_facility_id: null,
+      p_note: "Automatically qualified from a referral-safe Crown Network profile.",
+      p_actor_user_id: null,
+    } as never);
+
+    if (qualificationError) {
+      console.error("Unable to automatically qualify Crown Network profile referral", qualificationError);
+      automaticDelivery.push(
+        ...eligibleFacilities.map((facility) => ({
+          facilityPageId: facility.page_id,
+          status: "pending_manual_delivery" as const,
+        })),
+      );
+    } else {
+      for (const facility of eligibleFacilities) {
+        const notificationEmail = facility.notification_email?.trim().toLowerCase() || "";
+        let notificationId: string | null = null;
+
+        try {
+          const access = createNetworkProviderAccessToken();
+          const accessUrl = buildNetworkProviderAccessUrl(access.token);
+          const { data: issuedNotificationId, error: deliveryError } = await admin.rpc(
+            "deliver_network_referral" as never,
+            {
+              p_referral_id: data,
+              p_facility_id: facility.id,
+              p_token_hash: access.tokenHash,
+              p_expires_at: access.expiresAt,
+              p_notification_email: notificationEmail,
+              p_note: "Automatically delivered from a referral-safe Crown Network profile.",
+              p_actor_user_id: null,
+            } as never,
+          );
+          if (deliveryError || typeof issuedNotificationId !== "string") {
+            throw new Error("Secure Crown Referral access could not be issued.");
+          }
+          notificationId = issuedNotificationId;
+
+          if (process.env.NETWORK_REFERRALS_EMAIL_ENABLED !== "true") {
+            automaticDelivery.push({ facilityPageId: facility.page_id, status: "queued" });
+            continue;
+          }
+
+          const emailResult = await sendNetworkProviderReferralNotification({
+            to: notificationEmail,
+            facilityName: pageNames.get(facility.page_id) || "your community",
+            accessUrl,
+            expiresAt: access.expiresAt,
+          });
+          const providerMessageId =
+            emailResult && typeof emailResult === "object" && "id" in emailResult
+              ? String(emailResult.id)
+              : null;
+          const { error: notificationUpdateError } = await admin
+            .from("network_referral_notifications")
+            .update({
+              status: "sent",
+              provider_message_id: providerMessageId,
+              attempted_at: new Date().toISOString(),
+              sent_at: new Date().toISOString(),
+              error_message: null,
+            })
+            .eq("id", notificationId);
+          if (notificationUpdateError) {
+            console.error("Unable to mark automatic Crown Referral notification sent", notificationUpdateError);
+          }
+          automaticDelivery.push({ facilityPageId: facility.page_id, status: "sent" });
+        } catch (automaticDeliveryError) {
+          console.error("Automatic Crown Referral delivery failed", automaticDeliveryError);
+          if (notificationId) {
+            const { error: notificationUpdateError } = await admin
+              .from("network_referral_notifications")
+              .update({
+                status: "failed",
+                attempted_at: new Date().toISOString(),
+                error_message: "The automatic Crown Referral email could not be sent.",
+              })
+              .eq("id", notificationId);
+            if (notificationUpdateError) {
+              console.error("Unable to record automatic Crown Referral notification failure", notificationUpdateError);
+            }
+          }
+          automaticDelivery.push({ facilityPageId: facility.page_id, status: "failed" });
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ referralId: data, automaticDelivery }, { status: 201 });
 }

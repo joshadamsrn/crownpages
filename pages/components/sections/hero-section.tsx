@@ -39,6 +39,7 @@ interface HeroSectionProps {
     phone?: string;
     email?: string;
   } | null;
+  referralSafeMode?: boolean;
 }
 
 // Helper to get full Supabase URL
@@ -62,6 +63,7 @@ export function HeroSection({
   isPreview = false,
   companyHeaderAddress,
   contactCardData,
+  referralSafeMode = false,
 }: HeroSectionProps) {
   const { backgroundImage, heroImage, logoUrl, logo, title, subtitle } = data;
   const [heroKey, setHeroKey] = useState(Date.now());
@@ -125,27 +127,29 @@ export function HeroSection({
             {/* Share Button Overlay - inside hero container */}
             {fullHeroUrl && (
               <>
-                <div className={`absolute ${isPreview ? 'top-4' : 'top-4'} left-4 z-20 flex flex-col items-center gap-1.5`}>
-                  <PageSaveSheet
-                    pageId={pageId}
-                    pageUrl={pageUrl}
-                    pageTitle={pageTitle || title || business?.name}
-                    pageSlug={pageSlug}
-                    businessSlug={businessSlug || (business as BusinessData & { slug?: string })?.slug}
-                    brochureSections={brochureSections}
-                    businessName={business?.name}
-                    address={companyHeaderAddress}
-                    phone={contactCardData?.phone}
-                    email={contactCardData?.email}
-                    contactName={contactCardData?.name || contactCardData?.contactName}
-                    heroImageUrl={fullHeroUrl}
-                    logoUrl={fullLogoUrl}
-                    triggerClassName="items-center"
-                  />
-                  <span className="text-[12px] font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]">
-                    Save
-                  </span>
-                </div>
+                {!referralSafeMode ? (
+                  <div className={`absolute ${isPreview ? 'top-4' : 'top-4'} left-4 z-20 flex flex-col items-center gap-1.5`}>
+                    <PageSaveSheet
+                      pageId={pageId}
+                      pageUrl={pageUrl}
+                      pageTitle={pageTitle || title || business?.name}
+                      pageSlug={pageSlug}
+                      businessSlug={businessSlug || (business as BusinessData & { slug?: string })?.slug}
+                      brochureSections={brochureSections}
+                      businessName={business?.name}
+                      address={companyHeaderAddress}
+                      phone={contactCardData?.phone}
+                      email={contactCardData?.email}
+                      contactName={contactCardData?.name || contactCardData?.contactName}
+                      heroImageUrl={fullHeroUrl}
+                      logoUrl={fullLogoUrl}
+                      triggerClassName="items-center"
+                    />
+                    <span className="text-[12px] font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]">
+                      Save
+                    </span>
+                  </div>
+                ) : null}
                 <div className={`absolute ${isPreview ? 'top-4' : 'top-4'} right-4 z-20 flex flex-col items-center gap-1.5`}>
                   <ShareButton
                     url={pageUrl}
