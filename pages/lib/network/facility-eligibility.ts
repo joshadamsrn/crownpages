@@ -1,4 +1,4 @@
-import { isNetworkInsuranceOnlyCareTypes } from "@/lib/network/types";
+import { hasNetworkInsuranceCareType } from "@/lib/network/types";
 
 export type ReferralEligibilityFields = {
   listing_status: string;
@@ -26,7 +26,7 @@ export function isNetworkFacilityReferralEligible(
     : null;
   const isNonCompensatedInsuranceReferral =
     facility.referral_fee_type === "none" &&
-    isNetworkInsuranceOnlyCareTypes(facility.care_types ?? []);
+    hasNetworkInsuranceCareType(facility.care_types ?? []);
   const hasEligibleAgreement =
     facility.agreement_status === "active" &&
     (!effectiveAt || (!Number.isNaN(effectiveAt.valueOf()) && effectiveAt <= now)) &&

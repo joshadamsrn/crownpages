@@ -6,7 +6,7 @@ import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import {
   NETWORK_CARE_TYPES,
-  isNetworkInsuranceOnlyCareTypes,
+  hasNetworkInsuranceCareType,
   type NetworkCareType,
 } from "@/lib/network/types";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
@@ -97,10 +97,10 @@ function validateSettings(body: unknown):
     return { success: false, error: "Enter up to 100 unique insurance plans, one per line." };
   }
   const isNonCompensatedReferral = referralFeeType === "none";
-  if (isNonCompensatedReferral && !isNetworkInsuranceOnlyCareTypes(careTypes)) {
+  if (isNonCompensatedReferral && !hasNetworkInsuranceCareType(careTypes)) {
     return {
       success: false,
-      error: "No-fee referrals are available only when every selected care type is insurance-covered.",
+      error: "No-fee referrals require Skilled Nursing, Home Health, or Hospice as a care type.",
     };
   }
   const normalizedAgreementStatus = isNonCompensatedReferral ? "not_contacted" : agreementStatus;

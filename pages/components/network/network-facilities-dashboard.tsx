@@ -32,7 +32,7 @@ import type {
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
 import {
   NETWORK_CARE_TYPES,
-  isNetworkInsuranceOnlyCareTypes,
+  hasNetworkInsuranceCareType,
   type NetworkCareType,
 } from "@/lib/network/types";
 import { cn } from "@/lib/utils";
@@ -116,7 +116,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
 
   const activeCount = facilities.filter((facility) => facility.isReferralEligible).length;
   const pendingCount = facilities.filter((facility) => facility.agreementStatus === "pending").length;
-  const draftIsInsuranceOnly = draft ? isNetworkInsuranceOnlyCareTypes(draft.careTypes) : false;
+  const draftSupportsNoFee = draft ? hasNetworkInsuranceCareType(draft.careTypes) : false;
   const draftIsNonCompensated = draft?.referralFeeType === "none";
   const draftIsReferralEligible = draft
     ? isNetworkFacilityReferralEligible({
@@ -369,10 +369,10 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                               const next = checked === true
                                 ? [...draft.careTypes, careType]
                                 : draft.careTypes.filter((item) => item !== careType);
-                              const remainsInsuranceOnly = isNetworkInsuranceOnlyCareTypes(next);
+                              const stillSupportsNoFee = hasNetworkInsuranceCareType(next);
                               patchDraft({
                                 careTypes: next as NetworkCareType[],
-                                ...(draftIsNonCompensated && !remainsInsuranceOnly
+                                ...(draftIsNonCompensated && !stillSupportsNoFee
                                   ? {
                                       referralFeeType: null,
                                       referralStatus: "paused",
@@ -424,7 +424,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                           value={draft.referralFeeType || ""}
                         >
                           <option value="">Not set</option>
-                          <option disabled={!draftIsInsuranceOnly} value="none">
+                          <option disabled={!draftSupportsNoFee} value="none">
                             No referral fee — insurance-covered services
                           </option>
                           <option value="flat">Flat fee</option>
@@ -447,7 +447,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                         <div className="font-bold">Non-compensated insurance referral</div>
                         <p className="mt-1 text-xs leading-5">
                           No facility payment, referral fee, agreement, effective date, or terms version is
-                          required. This option is limited to Skilled Nursing, Home Health, and Hospice.
+                          required. This option requires Skilled Nursing, Home Health, or Hospice as a care type.
                         </p>
                       </div>
                     ) : (
@@ -460,7 +460,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                     <div className="font-bold">{draftIsReferralEligible ? "This facility is referral ready" : "Referral readiness is incomplete"}</div>
                     <p className="mt-1 text-xs leading-5">
                       {draftIsNonCompensated
-                        ? "A free-referral facility needs a visible listing, insurance-covered care types only, eligible status, a notification email, and the accepting-referrals switch."
+                        ? "A free-referral facility needs a visible listing, a qualifying insurance-covered care type, eligible status, a notification email, and the accepting-referrals switch."
                         : "A compensated facility needs a visible listing, active and currently effective agreement, eligible status, notification email, and the accepting-referrals switch."}
                     </p>
                   </div>
