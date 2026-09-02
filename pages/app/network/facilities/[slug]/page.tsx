@@ -122,10 +122,9 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
 
         <aside>
           <div className={styles.contactCard}>
-            <h2>Connect through Crown Network</h2>
+            <h2>Connect with {facility.name}</h2>
             <p>
-              Ask Crown Network for personalized help with availability, next steps, and connecting with this
-              provider, or open its complete Crown Pages profile.
+              Crown Network will personalize help with availability, next steps, and connecting with {facility.name}.
             </p>
             <Link className={styles.primaryAction} href={`/network/get-help?facility=${encodeURIComponent(facility.slug)}`}>
               Connect for Free
