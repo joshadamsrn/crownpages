@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Mail,
   MapPin,
-  RefreshCw,
   Save,
   Search,
   ShieldCheck,
@@ -93,7 +92,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
   const [draft, setDraft] = useState<NetworkAdminFacility | null>(initialFacilities[0] ?? null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [pendingAction, setPendingAction] = useState<"save" | "sync" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"save" | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const filteredFacilities = useMemo(() => {
@@ -160,33 +159,6 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
     });
   };
 
-  const refreshFacilities = async (preferredId?: string | null) => {
-    const response = await fetch("/api/network/admin/facilities", { cache: "no-store" });
-    const result = (await response.json()) as { facilities?: NetworkAdminFacility[]; error?: string };
-    if (!response.ok || !result.facilities) throw new Error(result.error || "Facilities could not be loaded.");
-    setFacilities(result.facilities);
-    const nextId = preferredId || selectedId || result.facilities[0]?.id || null;
-    const next = result.facilities.find((facility) => facility.id === nextId) || result.facilities[0] || null;
-    setSelectedId(next?.id ?? null);
-    setDraft(next);
-  };
-
-  const syncFacilities = async () => {
-    setPendingAction("sync");
-    setFeedback(null);
-    try {
-      const response = await fetch("/api/network/admin/facilities", { method: "POST" });
-      const result = (await response.json()) as { syncedCount?: number; error?: string };
-      if (!response.ok) throw new Error(result.error || "The PHN catalog could not be synchronized.");
-      await refreshFacilities(selectedId);
-      setFeedback(`${result.syncedCount ?? 0} PHN facility records synchronized.`);
-    } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "The PHN catalog could not be synchronized.");
-    } finally {
-      setPendingAction(null);
-    }
-  };
-
   const saveFacility = async () => {
     if (!draft) return;
     setPendingAction("save");
@@ -248,21 +220,13 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
 
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
-      <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-amber-700">
             <Building2 className="h-4 w-4" /> Crown Network operations
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Facility partners</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600">
-            Verify imported profiles, record agreement terms, and control exactly which facilities can receive
-            family referrals.
-          </p>
         </div>
-        <Button disabled={Boolean(pendingAction)} onClick={syncFacilities} variant="outline">
-          <RefreshCw className={cn(pendingAction === "sync" && "animate-spin")} />
-          Sync PHN profiles
-        </Button>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
