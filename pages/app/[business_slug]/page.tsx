@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { BusinessPageRenderer } from "@/components/business-page-renderer";
 import { BusinessPageAnalytics } from "@/components/analytics";
+import { getCurrentWhiteLabelTenant } from "@/lib/white-label-tenants";
 
 import type { Database } from "@/database.types";
 
@@ -58,11 +59,12 @@ export async function generateMetadata({
     params,
 }: PageProps): Promise<Metadata> {
     const { business_slug } = await params;
+    const tenant = await getCurrentWhiteLabelTenant();
     const businessPageData = await getBusinessPageData(business_slug);
 
     if (!businessPageData) {
         return {
-            title: "Business Not Found | CrownPages",
+            title: `Business Not Found | ${tenant.publicName}`,
             description: "The business page you are looking for does not exist.",
         };
     }
@@ -72,7 +74,7 @@ export async function generateMetadata({
     const description = businessPageData.description || `${businessName} - Connect with us`;
 
     return {
-        title: `${title} | CrownPages`,
+        title: `${title} | ${tenant.publicName}`,
         description,
         openGraph: {
             title,
@@ -89,6 +91,7 @@ export async function generateMetadata({
 
 export default async function BusinessPage({ params }: PageProps) {
     const { business_slug } = await params;
+    const tenant = await getCurrentWhiteLabelTenant();
     const businessPageData = await getBusinessPageData(business_slug);
 
     if (!businessPageData) {
@@ -137,6 +140,7 @@ export default async function BusinessPage({ params }: PageProps) {
                     <BusinessPageRenderer
                         businessPageData={businessPageData}
                         business={business}
+                        showPlatformBranding={!tenant.hidePlatformBranding}
                     />
                 </Suspense>
             </div>

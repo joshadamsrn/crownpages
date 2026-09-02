@@ -26,6 +26,7 @@ interface ContactCardSectionProps {
   pageId?: string;
   sectionId?: string;
   companyHeaderAddress?: string;
+  forceMobileLayout?: boolean;
 }
 
 export const ContactCardSection: React.FC<ContactCardSectionProps> = ({
@@ -34,6 +35,7 @@ export const ContactCardSection: React.FC<ContactCardSectionProps> = ({
   pageId,
   sectionId,
   companyHeaderAddress,
+  forceMobileLayout = false,
 }) => {
   // Support both naming conventions (mobile app uses contactName, renderer uses name)
   const name = data?.name || data?.contactName;
@@ -44,6 +46,12 @@ export const ContactCardSection: React.FC<ContactCardSectionProps> = ({
   const address = data?.address;
   
   const [isContactSaved, setIsContactSaved] = useState(false);
+  const saveContactButtonStyle = isContactSaved
+    ? undefined
+    : {
+        borderColor: '#0f4fb3',
+        background: 'linear-gradient(180deg, #ffffff 0%, #edf4ff 100%)',
+      };
 
   const getImageUrl = (url?: string) => {
     if (!url) return null;
@@ -179,38 +187,67 @@ export const ContactCardSection: React.FC<ContactCardSectionProps> = ({
 
   return (
     <section
-      className="py-0 my-2.5"
+      className={forceMobileLayout ? "py-1 my-2" : "py-1 my-3"}
       style={{
-        backgroundColor: styles?.background || '#fff',
+        backgroundColor: styles?.background || 'transparent',
       }}
     >
-      <div className="max-w-5xl mx-auto px-4">
-        {/* Horizontal layout: image | name/role | Save Contact button */}
-        <div className="flex items-center justify-between">
+      <div
+        className={`page-shell-panel overflow-hidden rounded-[30px] ${
+          forceMobileLayout ? "px-5 py-5" : "px-5 py-5 md:px-7 md:py-6"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3">
           {/* Contact Image - Rounded rectangle */}
           {fullImageUrl ? (
-            <div className="relative w-[80px] h-[80px] md:w-[100px] md:h-[100px] mr-3 md:mr-4 flex-shrink-0">
+            <div
+              className={`relative flex-shrink-0 overflow-hidden rounded-[24px] ring-1 ring-slate-200/70 ${
+                forceMobileLayout ? "mr-1.5 h-[86px] w-[86px]" : "mr-1.5 h-[86px] w-[86px] md:mr-3 md:h-[106px] md:w-[106px]"
+              }`}
+            >
               <Image
                 src={fullImageUrl}
                 alt={name}
                 fill
-                className="object-cover rounded-xl"
+                className="object-cover"
                 unoptimized
               />
             </div>
           ) : (
-            <div className="w-[80px] h-[80px] md:w-[100px] md:h-[100px] mr-3 md:mr-4 flex-shrink-0 bg-gray-100 rounded-xl flex items-center justify-center">
-              <UserIcon className="w-8 h-8 md:w-10 md:h-10 text-gray-400" />
+            <div
+              className={`mr-1.5 flex flex-shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br from-slate-50 to-slate-100 ring-1 ring-slate-200/70 ${
+                forceMobileLayout ? "h-[86px] w-[86px]" : "h-[86px] w-[86px] md:mr-3 md:h-[106px] md:w-[106px]"
+              }`}
+            >
+              <UserIcon className={forceMobileLayout ? "h-8 w-8 text-slate-400" : "h-8 w-8 text-slate-400 md:h-10 md:w-10"} />
             </div>
           )}
 
           {/* Contact Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-black">
+          <div className={`min-w-0 flex-1 ${forceMobileLayout ? "pr-2" : "pr-2 md:pr-3"}`}>
+            <h3
+              className={`font-semibold leading-tight tracking-[-0.03em] text-slate-950 ${
+                forceMobileLayout ? "text-[1.06rem]" : "text-[1.06rem] md:text-[1.4rem]"
+              }`}
+              style={{
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+              }}
+            >
               {name}
             </h3>
             {role && (
-              <p className="text-base md:text-lg text-gray-600">
+              <p
+                className={`mt-1 leading-snug text-slate-500 ${
+                  forceMobileLayout ? "text-[0.88rem]" : "text-[0.88rem] md:text-[0.98rem]"
+                }`}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}
+              >
                 {role}
               </p>
             )}
@@ -219,22 +256,24 @@ export const ContactCardSection: React.FC<ContactCardSectionProps> = ({
           {/* Save Contact Button */}
           <button
             onClick={handleSaveContact}
-            className={`flex items-center border rounded-lg px-3 md:px-4 py-2 md:py-2.5 transition-all ${
+            style={saveContactButtonStyle}
+            className={`ml-2 flex shrink-0 items-center justify-center rounded-full border-2 px-3 shadow-sm transition-all ${
+              forceMobileLayout ? "h-[50px] w-[122px]" : "h-[50px] w-[122px] md:h-[56px] md:w-[148px] md:px-4"
+            } ${
               isContactSaved
-                ? 'bg-black border-black'
-                : 'bg-white border-[#c5c3c3]'
+                ? 'border-slate-900 bg-slate-900'
+                : 'text-[#1b2431] hover:-translate-y-0.5'
             }`}
-            style={{
-              borderWidth: '1.5px',
-            }}
           >
             {isContactSaved ? (
-              <Check className="w-5 h-5 md:w-6 md:h-6 text-white" />
+              <Check size={18} className="shrink-0 text-white" />
             ) : (
-              <UserPlus className="w-5 h-5 md:w-6 md:h-6 text-black" />
+              <UserPlus size={17} className="shrink-0 text-[#0f4fb3]" />
             )}
-            <span className={`ml-1.5 md:ml-2 font-semibold text-sm md:text-base ${
-              isContactSaved ? 'text-white' : 'text-black'
+            <span className={`ml-1.5 whitespace-nowrap font-semibold ${
+              forceMobileLayout ? "text-[0.8rem]" : "text-[0.8rem] md:ml-2 md:text-[0.9rem]"
+            } ${
+              isContactSaved ? 'text-white' : 'text-[#1b2431]'
             }`}>
               {isContactSaved ? 'Saved' : 'Save Contact'}
             </span>

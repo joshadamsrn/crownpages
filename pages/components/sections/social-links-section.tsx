@@ -38,21 +38,19 @@ export const SocialLinksSection: React.FC<SocialLinksSectionProps> = ({
   return (
     <section
       className="py-3 md:py-5"
-      style={{ backgroundColor: styles?.background || '#fff' }}
+      style={{ backgroundColor: styles?.background || 'transparent' }}
     >
-      <div className="max-w-5xl mx-auto px-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+      <div className="page-shell-panel overflow-hidden rounded-[32px] px-7 py-7 md:px-10 md:py-8">
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">
           {title || 'Social Media'}
         </h2>
 
-        {/* Scrollable horizontal row of brand icon tiles */}
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
           {visibleLinks.map((link) => {
             const href = link.url.startsWith('http') ? link.url : `https://${link.url}`;
             const displayLabel = link.label || link.platform;
 
             return (
-              // TrackableButton renders <a>; SocialBrandIcon renders a div+svg — no nested anchor.
               <TrackableButton
                 key={link.id}
                 href={href}
@@ -65,7 +63,7 @@ export const SocialLinksSection: React.FC<SocialLinksSectionProps> = ({
                   section_type: 'socialLinks',
                 }}
                 target="_blank"
-                className="transition-transform duration-150 hover:scale-105 active:scale-95 flex-shrink-0"
+                className="flex-shrink-0 transition-transform duration-150 hover:scale-105 active:scale-95"
               >
                 <SocialBrandIcon platform={link.platform} size={72} />
               </TrackableButton>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { trackEvent } from '@/lib/analytics';
 import Lightbox from 'yet-another-react-lightbox';
 import { Slide, SlideImage, SlideVideo } from 'yet-another-react-lightbox';
@@ -15,12 +16,14 @@ import 'swiper/css/free-mode';
 import 'swiper/css/navigation';
 import { MuxVideoPlayer } from '../MuxVideoPlayer';
 import { isMuxUrl } from '@/lib/resolve-video-url';
+import { getOptimizedPublicImageUrl } from '@/lib/supabase/client';
 
 type MediaItem = {
     type: 'image' | 'video';
     url: string;
     name: string;
     caption?: string;
+    thumbnail?: string;
 };
 
 interface InstagramStyleMediaGalleryProps {
@@ -33,6 +36,7 @@ interface InstagramStyleMediaGalleryProps {
     videos: Array<{
         id: string;
         url: string;
+        thumbnail?: string;
     }>;
     title?: string;
     wrapperMode?: boolean;
@@ -51,6 +55,9 @@ const getVideoType = (url: string): string => {
     }
 };
 
+const getGalleryPreviewSrc = (src: string | undefined, width: number) =>
+    getOptimizedPublicImageUrl(src, { width, quality: 78, resize: 'cover' }) || src || '';
+
 export default function InstagramStyleMediaGallery({ 
     images, 
     videos, 
@@ -65,6 +72,12 @@ export default function InstagramStyleMediaGallery({
     const [lightboxIndex, setLightboxIndex] = useState(-1);
     const [isMobile, setIsMobile] = useState<boolean | null>(null);
     const [mediaCounts, setMediaCounts] = useState({ videos: 0, images: 0, total: 0 });
+    const resolvedTitle = title?.trim()
+        || (videos.length && !images.length
+            ? 'Videos'
+            : images.length && !videos.length
+                ? 'Photos'
+                : 'Photos & Videos');
 
     const openMedia = useCallback((index: number, isVideo: boolean) => {
         setLightboxIndex(index);
@@ -111,7 +124,8 @@ export default function InstagramStyleMediaGallery({
                     allMedia.push({
                         type: 'video',
                         url: video.url,
-                        name: `Video ${video.id}`
+                        name: `Video ${video.id}`,
+                        thumbnail: video.thumbnail
                     });
                 });
             }
@@ -153,7 +167,7 @@ export default function InstagramStyleMediaGallery({
                     const hlsSrc = isMux ? `https://stream.mux.com/${playbackId}.m3u8` : item.url;
                     const thumbSrc = isMux
                       ? `https://image.mux.com/${playbackId}/thumbnail.jpg`
-                      : undefined;
+                      : item.thumbnail;
                     return {
                         type: 'video',
                         width: 1280,
@@ -208,27 +222,91 @@ export default function InstagramStyleMediaGallery({
 
     if (slides.length === 0) return null;
 
+    const renderInlineCard = (slide: any, index: number, layout: 'featured' | 'split') => {
+        const mediaType = slide.mediaType || (slide.type === 'video' ? 'video' : 'image');
+        const isVideo = mediaType === 'video';
+        const cardClass = layout === 'featured'
+            ? 'relative w-full aspect-[1.68] cursor-pointer group'
+            : 'relative flex-1 aspect-[0.9] cursor-pointer group';
+
+        return (
+            <div
+                key={index}
+                className={cardClass}
+                onClick={() => openMedia(index, isVideo)}
+            >
+                <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-100 shadow-md">
+                    {isVideo ? (
+                        (slide as any).thumbnailUrl ? (
+                            <Image
+                                src={getGalleryPreviewSrc((slide as any).thumbnailUrl, layout === 'featured' ? 1400 : 900)}
+                                alt="Video thumbnail"
+                                fill
+                                sizes={layout === 'featured' ? '100vw' : '50vw'}
+                                loading={index < 2 ? 'eager' : 'lazy'}
+                                decoding="async"
+                                unoptimized
+                                className="object-cover"
+                            />
+                        ) : (
+                            <video
+                                src={(slide as any).videoUrl}
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                                muted
+                                playsInline
+                                poster={(slide as any).poster || undefined}
+                            />
+                        )
+                    ) : (
+                        <Image
+                            src={getGalleryPreviewSrc((slide as any).src, layout === 'featured' ? 1400 : 900)}
+                            alt={(slide as any).alt || 'Media'}
+                            fill
+                            sizes={layout === 'featured' ? '100vw' : '50vw'}
+                            loading={index < 2 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            unoptimized
+                            className="object-cover"
+                        />
+                    )}
+
+                    {isVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-16 h-16 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-black opacity-0 group-active:opacity-10 transition-opacity duration-150" />
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className={wrapperMode ? "" : "mt-8 border-t border-gray-200 pt-6"}>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title || 'Photos & Videos'}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">{resolvedTitle}</h2>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        {mediaCounts.images > 0 && (
-                            <div className="inline-flex items-center gap-1">
-                                <span className="text-sm font-medium text-gray-700">{mediaCounts.images}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </div>
-                        )}
-                        {mediaCounts.videos > 0 && (
-                            <div className="inline-flex items-center gap-1">
-                                <span className="text-sm font-medium text-gray-700">{mediaCounts.videos}</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                            </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium text-gray-700">{mediaCounts.total}</span>
+                        {mediaCounts.videos > 0 && mediaCounts.images === 0 ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        ) : mediaCounts.images > 0 && mediaCounts.videos === 0 ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 8l4-2v12l-4-2" />
+                            </svg>
                         )}
                     </div>
                     {slides.length > 0 && (
@@ -246,66 +324,29 @@ export default function InstagramStyleMediaGallery({
             </div>
 
             <div className={`${isMobile === false ? 'hidden' : 'block md:hidden'}`}>
-                <Swiper
-                    modules={[FreeMode]}
-                    spaceBetween={12}
-                    slidesPerView={2.2}
-                    freeMode={true}
-                    className="!pb-2"
-                >
-                    {slides.map((slide: any, index) => {
-                        const mediaType = slide.mediaType || (slide.type === 'video' ? 'video' : 'image');
-                        const isVideo = mediaType === 'video';
-                        
-                        return (
+                {slides.length === 1 ? (
+                    <div className="w-full">
+                        {renderInlineCard(slides[0], 0, 'featured')}
+                    </div>
+                ) : slides.length === 2 ? (
+                    <div className="flex gap-3">
+                        {slides.map((slide: any, index) => renderInlineCard(slide, index, 'split'))}
+                    </div>
+                ) : (
+                    <Swiper
+                        modules={[FreeMode]}
+                        spaceBetween={12}
+                        slidesPerView={2.2}
+                        freeMode={true}
+                        className="!pb-2"
+                    >
+                        {slides.map((slide: any, index) => (
                             <SwiperSlide key={index}>
-                                <div
-                                    className="relative aspect-square cursor-pointer group"
-                                    onClick={() => openMedia(index, isVideo)}
-                                >
-                                    <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-100 shadow-md">
-                                        {isVideo ? (
-                                            (slide as any).muxPlaybackId ? (
-                                                <img
-                                                    src={(slide as any).thumbnailUrl}
-                                                    alt="Video thumbnail"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <video
-                                                    src={(slide as any).videoUrl}
-                                                    className="w-full h-full object-cover"
-                                                    preload="metadata"
-                                                    muted
-                                                    playsInline
-                                                    poster=""
-                                                />
-                                            )
-                                        ) : (
-                                            <img
-                                                src={(slide as any).src}
-                                                alt={(slide as any).alt || 'Media'}
-                                                className="w-full h-full object-cover"
-                                            />
-                                        )}
-                                        
-                                        {isVideo && (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <div className="w-14 h-14 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-lg">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M8 5v14l11-7z" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        )}
-                                        
-                                        <div className="absolute inset-0 bg-black opacity-0 group-active:opacity-10 transition-opacity duration-150" />
-                                    </div>
-                                </div>
+                                {renderInlineCard(slide, index, 'split')}
                             </SwiperSlide>
-                        );
-                    })}
-                </Swiper>
+                        ))}
+                    </Swiper>
+                )}
             </div>
 
             <div className={`relative ${isMobile === true ? 'hidden' : 'hidden md:block'}`}>
@@ -334,11 +375,16 @@ export default function InstagramStyleMediaGallery({
                                     onClick={() => openMedia(index, isVideo)}
                                 >
                                     {isVideo ? (
-                                        slide.muxPlaybackId ? (
-                                            <img
-                                                src={slide.thumbnailUrl}
+                                        slide.thumbnailUrl ? (
+                                            <Image
+                                                src={getGalleryPreviewSrc(slide.thumbnailUrl, 800)}
                                                 alt="Video thumbnail"
-                                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                fill
+                                                sizes="(max-width: 1024px) 33vw, 25vw"
+                                                loading={index < 4 ? 'eager' : 'lazy'}
+                                                decoding="async"
+                                                unoptimized
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
                                             />
                                         ) : (
                                             <video
@@ -347,14 +393,19 @@ export default function InstagramStyleMediaGallery({
                                                 preload="metadata"
                                                 muted
                                                 playsInline
-                                                poster=""
+                                                poster={slide.poster || undefined}
                                             />
                                         )
                                     ) : (
-                                        <img
-                                            src={slide.src}
+                                        <Image
+                                            src={getGalleryPreviewSrc(slide.src, 800)}
                                             alt={slide.alt || 'Media'}
-                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            fill
+                                            sizes="(max-width: 1024px) 33vw, 25vw"
+                                            loading={index < 4 ? 'eager' : 'lazy'}
+                                            decoding="async"
+                                            unoptimized
+                                            className="object-cover transition-transform duration-300 group-hover:scale-105"
                                         />
                                     )}
                                     

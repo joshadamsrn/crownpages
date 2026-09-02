@@ -1,5 +1,14 @@
 import { createClient } from '@/lib/supabase/client';
 
+const CROWN_ADMIN_EMAILS = new Set([
+    "jkuya@hotmail.com",
+    "afrasure74@gmail.com",
+    "frasurekenny@yahoo.com",
+    "parkerfrasure@gmail.com",
+    "utahdavebrown@gmail.com",
+    "frasurepaxton@gmail.com",
+]);
+
 // Types for organization data
 export interface OrganizationInfo {
     id: string;
@@ -217,4 +226,55 @@ export async function canManageLicensesClient(
 ): Promise<boolean> {
     const supabase = createClient();
     return canManageLicenses(userId, supabase);
-} 
+}
+
+export function isCrownAdminEmail(email: string | null | undefined): boolean {
+    return Boolean(email && CROWN_ADMIN_EMAILS.has(email.trim().toLowerCase()));
+}
+
+export async function hasCrownAdminAccess(
+    userId: string,
+    supabase: any
+): Promise<boolean> {
+    const { data: userProfile } = await supabase
+        .from("users")
+        .select("email")
+        .eq("id", userId)
+        .single();
+
+    return isCrownAdminEmail(userProfile?.email);
+}
+
+/**
+ * Check if a user belongs to the TEAMCROWNPAGE organization.
+ * This is used to gate internal-only tools in both web and mobile surfaces.
+ */
+export async function isTeamCrownPageMember(
+    userId: string,
+    supabase: any
+): Promise<boolean> {
+    const [{ data: userProfile }, organizationStatus] = await Promise.all([
+        supabase
+            .from("users")
+            .select("organization_id")
+            .eq("id", userId)
+            .single(),
+        getUserOrganizationStatus(userId, supabase),
+    ]);
+
+    if (userProfile?.organization_id) {
+        const { data: organization } = await supabase
+            .from("organizations")
+            .select("name")
+            .eq("id", userProfile.organization_id)
+            .single();
+
+        if (organization?.name?.trim().toUpperCase() === "TEAMCROWNPAGE") {
+            return true;
+        }
+    }
+
+    return organizationStatus.ownedOrgs.some(
+        (organization) => organization.name?.trim().toUpperCase() === "TEAMCROWNPAGE",
+    );
+}

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
+import { getCurrentWhiteLabelTenant } from '@/lib/white-label-tenants';
 
 export async function GET() {
+    const tenant = await getCurrentWhiteLabelTenant();
     const assetLinks = [
         {
             "relation": ["delegate_permission/common.handle_all_urls"],
             "target": {
                 "namespace": "android_app",
-                "package_name": "com.phnteam.pagesmobile",
-                "sha256_cert_fingerprints": [
-                    "09:53:E1:48:C5:9C:1C:D6:B3:03:40:09:17:14:51:66:71:DC:D7:F3:A8:FC:1C:31:E0:AE:15:76:E1:24:31:38"
-                ]
+                "package_name": tenant.androidPackageName,
+                "sha256_cert_fingerprints": tenant.androidSha256CertFingerprints
             }
         }
     ];

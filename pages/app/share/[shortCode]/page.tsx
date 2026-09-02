@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { EnhancedPageRenderer, PageContent } from '@/components/enhanced-page-renderer';
 import { Analytics } from '@/components/analytics';
+import { PageAIAssistant } from '@/components/page-ai-assistant';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 import type { Database } from '@/database.types';
 import { SectionStyles } from '@/types';
@@ -72,6 +74,10 @@ async function incrementViewCount(shortCode: string) {
 
 export default async function SharePage({ params }: SharePageProps) {
   const { shortCode } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const shareData = await getShareLinkData(shortCode);
 
   if (!shareData || !shareData.page) {
@@ -88,10 +94,16 @@ export default async function SharePage({ params }: SharePageProps) {
 
   const currentPath = `/share/${shortCode}`;
   const businessSlug = shareData.page.business?.slug || 'unknown';
+  const admin = createAdminClient();
+  const { data: assistantSetting } = await admin
+    .from('business_ai_assistant_settings')
+    .select('enabled, welcome_message')
+    .eq('business_id', shareData.page.business_id)
+    .maybeSingle();
 
   return (
     <>
-      <Analytics pageId={shareData.page.id} />
+      <Analytics pageId={shareData.page.id} userId={user?.id} />
 
 
 
@@ -111,10 +123,18 @@ export default async function SharePage({ params }: SharePageProps) {
             business={shareData.page.business}
             pageData={shareData.page}
           />
+          {assistantSetting?.enabled ? (
+            <PageAIAssistant
+              pageId={shareData.page.id}
+              businessName={shareData.page.business?.name || shareData.page.title}
+              welcomeMessage={assistantSetting.welcome_message || 'Hi! What would you like to know about this community?'}
+              primaryColor={shareData.page.business?.primary_color || '#2563eb'}
+            />
+          ) : null}
         </Suspense>
       </div>
 
 
     </>
   );
-} 
+}

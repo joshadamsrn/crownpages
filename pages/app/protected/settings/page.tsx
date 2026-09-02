@@ -10,6 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Settings, User, Shield, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { KioskOverviewPasswordSettings } from "@/components/kiosk-overview-password-settings";
+import { NurseAssessmentEmailSettings } from "@/components/nurse-assessment-email-settings";
+import { KioskAdminSettings } from "@/components/kiosk-admin-settings";
+import { KioskFeedbackSettings } from "@/components/kiosk-feedback-settings";
+import { AIAssistantSettings } from "@/components/ai-assistant-settings";
 
 export default async function SettingsPage() {
     const supabase = await createClient();
@@ -125,6 +130,16 @@ export default async function SettingsPage() {
                     </CardContent>
                 </Card>
 
+                <KioskOverviewPasswordSettings />
+
+                <NurseAssessmentEmailSettings />
+
+                <KioskFeedbackSettings />
+
+                <AIAssistantSettings />
+
+                <KioskAdminSettings />
+
                 {/* Organization Settings (if applicable) */}
                 {isOrgOwner && (
                     <Card className="md:col-span-2">
@@ -184,4 +199,4 @@ export default async function SettingsPage() {
             </div>
         </div>
     );
-} 
+}

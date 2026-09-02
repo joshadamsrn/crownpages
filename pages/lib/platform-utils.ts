@@ -52,10 +52,14 @@ export function detectPlatform(): PlatformInfo {
     const isDesktop = !isMobile;
 
     // Check if the user agent suggests the app is already installed/running
+    const hasReactNativeWebView =
+        typeof (window as Window & { ReactNativeWebView?: unknown }).ReactNativeWebView !== 'undefined';
+
     const isInApp = /crown.?pages/i.test(userAgent) ||
         /pagesmobile/i.test(userAgent) ||
         // Check for custom user agent set by your app
-        /crownpages-app/i.test(userAgent);
+        /crownpages-app/i.test(userAgent) ||
+        hasReactNativeWebView;
 
     // Get cached app installation status
     const cachedStatus = getCachedAppInstallationStatus();
@@ -294,11 +298,11 @@ export function openInApp(path: string, fallbackToStore: boolean = true): void {
 /**
  * Generates a save-to-wallet deep link
  */
-export function generateSaveToWalletLink(pageId: string, businessSlug: string, pageSlug?: string): string {
-    const baseUrl = 'crownpages://save';
+export function generateSaveToWalletLink(pageId: string, businessSlug?: string, pageSlug?: string): string {
+    const baseUrl = 'pagesmobile://save';
     const params = new URLSearchParams({
         pageId,
-        businessSlug,
+        ...(businessSlug && { businessSlug }),
         ...(pageSlug && { pageSlug }),
         source: 'web'
     });
@@ -309,30 +313,25 @@ export function generateSaveToWalletLink(pageId: string, businessSlug: string, p
 /**
  * Opens the save-to-wallet flow in the app
  */
-export function saveToWallet(pageId: string, businessSlug: string, pageSlug?: string): void {
+export function saveToWallet(pageId: string, businessSlug?: string, pageSlug?: string): void {
     const platform = detectPlatform();
+    const saveLink = generateSaveToWalletLink(pageId, businessSlug, pageSlug);
 
-    if (!platform.isAppInstalled) {
-        console.warn('Cannot save to wallet: Crown Pages app not installed');
-
-        // If app not installed, prompt to install
-        if (platform.canInstallApp && platform.appStoreUrl) {
-            const installPrompt = confirm(
-                'To save pages to your Crown Pages wallet, please install the Crown Pages app. Would you like to download it now?'
-            );
-            if (installPrompt) {
-                window.location.href = platform.appStoreUrl;
-            }
-        }
+    // If we're already inside the app, go straight to the native save route.
+    if (platform.isInApp) {
+        window.location.href = saveLink;
         return;
     }
 
-    const saveLink = generateSaveToWalletLink(pageId, businessSlug, pageSlug);
-
-    // Try to open the save flow in the app
+    // On mobile, try the deep link first even if install detection is uncertain.
+    // Do not show a second install prompt here; iOS/Android already handle
+    // deep-link confirmation natively and duplicate prompts create confusion.
     if (platform.isIOS || platform.isAndroid) {
         window.location.href = saveLink;
+        return;
     }
+
+    console.warn('Cannot save to wallet: mobile wallet flow unavailable on this platform');
 }
 
 /**

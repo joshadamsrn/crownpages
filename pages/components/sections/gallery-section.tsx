@@ -102,9 +102,13 @@ export function GallerySection({ data, styles, pageId, sectionId }: GallerySecti
           await Promise.all(
             videos.map(async (video: GalleryVideo) => {
               try {
+                const thumbnail = video.thumbnail
+                  ? await generatePublicUrl(video.thumbnail)
+                  : undefined;
+
                 // Mux URLs don't go through Supabase — pass them through directly
                 if (isMuxUrl(video.url)) {
-                  return { id: video.id, url: video.url, thumbnail: video.thumbnail };
+                  return { id: video.id, url: video.url, thumbnail: thumbnail || video.thumbnail };
                 }
                 const url = await generatePublicUrl(video.url);
                 if (!url) {
@@ -114,7 +118,7 @@ export function GallerySection({ data, styles, pageId, sectionId }: GallerySecti
                 return {
                   id: video.id,
                   url: url as string,
-                  thumbnail: video.thumbnail,
+                  thumbnail: thumbnail || video.thumbnail,
                 };
               } catch (error) {
                 console.error('Error loading video:', error);

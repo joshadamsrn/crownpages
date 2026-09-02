@@ -32,6 +32,7 @@ type BusinessPageData = Database["public"]["Tables"]["business_pages"]["Row"] & 
 interface BusinessPageRendererProps {
     businessPageData: BusinessPageData;
     business: Database["public"]["Tables"]["businesses"]["Row"];
+    showPlatformBranding?: boolean;
 }
 
 interface PageLink {
@@ -103,7 +104,8 @@ const getSocialColor = (platform: string) => {
 
 export function BusinessPageRenderer({
     businessPageData,
-    business
+    business,
+    showPlatformBranding = true,
 }: BusinessPageRendererProps) {
     const styles: Styles = (businessPageData.styles as unknown as Styles) || {};
     const pageLinks: PageLink[] = (businessPageData.page_links as unknown as PageLink[]) || [];
@@ -300,13 +302,14 @@ export function BusinessPageRenderer({
                     </div>
                 )}
 
-                {/* Footer */}
-                <div className="pt-8 text-xs opacity-60" style={{ color: textColor }}>
-                    <Link href="/" className="hover:opacity-100 transition-opacity">
-                        Powered by CrownPages
-                    </Link>
-                </div>
+                {showPlatformBranding && (
+                    <div className="pt-8 text-xs opacity-60" style={{ color: textColor }}>
+                        <Link href="/" className="hover:opacity-100 transition-opacity">
+                            Powered by CrownPages
+                        </Link>
+                    </div>
+                )}
             </div>
         </div>
     );
-} 
+}

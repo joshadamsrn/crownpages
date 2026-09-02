@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -11,7 +11,10 @@ import { SavePageButton } from "@/components/save-page-button";
 
 import type { Database } from "@/database.types";
 import { SectionStyles } from "@/types";
-import { generatePublicUrl, generateSignedUrl } from "@/lib/supabase/client";
+import { getCurrentWhiteLabelTenant } from "@/lib/white-label-tenants";
+import { getUploadPublicUrl } from "@/lib/upload-public-url";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { PageAIAssistant } from "@/components/page-ai-assistant";
 
 type PageData = Database["public"]["Tables"]["pages"]["Row"] & {
   business: Database["public"]["Tables"]["businesses"]["Row"] | null;
@@ -22,7 +25,7 @@ interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-async function getPageData(
+const getPageData = cache(async function getPageData(
   slug: string,
   business_slug: string,
   isPreview: boolean = false
@@ -54,19 +57,19 @@ async function getPageData(
   }
 
   if (data?.favicon_image_url) {
-    // const { data: urlData, error } = await supabase.storage
-    //   .from("uploads")
-    //   .createSignedUrl(data.favicon_image_url, 60 * 60);
-
-    data.favicon_image_url = await generatePublicUrl(
-      data?.favicon_image_url || ""
-    );
+    data.favicon_image_url = getUploadPublicUrl(data.favicon_image_url);
   }
 
-  data.og_image_url = (await generateSignedUrl(data.og_image_url)) || "";
+  data.og_image_url = getUploadPublicUrl(data.og_image_url);
 
-  return data as PageData;
-}
+  const { data: fullBusiness } = await supabase
+    .from("businesses")
+    .select("*")
+    .eq("id", data.business_id)
+    .maybeSingle();
+
+  return { ...data, business: fullBusiness || null } as PageData;
+});
 
 export async function generateMetadata({
   params,
@@ -75,17 +78,18 @@ export async function generateMetadata({
   const { slug, business_slug } = await params;
   const searchParamsData = await searchParams;
   const isPreview = searchParamsData.preview === "true";
+  const tenant = await getCurrentWhiteLabelTenant();
 
   const pageData = await getPageData(slug, business_slug, isPreview);
 
   if (!pageData) {
     return {
-      title: "Page Not Found | CrownPages",
+      title: `Page Not Found | ${tenant.publicName}`,
       description: "The page you are looking for does not exist.",
     };
   }
 
-  const businessName = pageData.business?.name || "CrownPages";
+  const businessName = pageData.business?.name || tenant.publicName;
   const title = pageData.meta_title || pageData.title;
 
   // Extract hero subtitle for use as OG description fallback
@@ -117,7 +121,7 @@ export async function generateMetadata({
   const ogDescription = (pageData as any).og_description || description;
 
   return {
-    title: `${title} | CrownPages`,
+    title: `${title} | ${tenant.publicName}`,
     description,
     openGraph: {
       title,
@@ -140,6 +144,10 @@ export default async function Page({ params, searchParams }: PageProps) {
   const isPreview = searchParamsData.preview === "true";
 
   const pageData = await getPageData(slug, business_slug, isPreview);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!pageData) {
     notFound();
@@ -164,20 +172,20 @@ export default async function Page({ params, searchParams }: PageProps) {
   };
 
   const currentPath = `/${business_slug}/${slug}`;
+  const admin = createAdminClient();
+  const { data: assistantSetting } = await admin
+    .from("business_ai_assistant_settings")
+    .select("enabled, welcome_message")
+    .eq("business_id", pageData.business_id)
+    .maybeSingle();
 
   return (
     <>
-      <Analytics pageId={pageData.id} />
-
-        {isPreview && (
-          <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 z-50">
-            <span className="font-medium">Preview Mode</span>
-          </div>
-        )}
-        <div className={`fixed ${isPreview ? 'top-14' : 'top-4'} right-4 z-50`}>
+      <Analytics pageId={pageData.id} userId={user?.id} />
+        <div className="fixed top-4 right-4 z-50">
           {/* <SavePageButton pageId={pageData.id} /> */}
         </div>
-        <div className={isPreview ? 'pt-12' : ''}>
+        <div>
           <Suspense
             fallback={<div className="min-h-screen bg-gray-50 animate-pulse" />}
           >
@@ -188,6 +196,14 @@ export default async function Page({ params, searchParams }: PageProps) {
               pageData={pageData}
               isPreview={isPreview}
             />
+            {!isPreview && assistantSetting?.enabled ? (
+              <PageAIAssistant
+                pageId={pageData.id}
+                businessName={business.name || pageData.title}
+                welcomeMessage={assistantSetting.welcome_message || "Hi! What would you like to know about this community?"}
+                primaryColor={business.primary_color || "#2563eb"}
+              />
+            ) : null}
           </Suspense>
         </div>
     </>

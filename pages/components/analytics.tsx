@@ -10,59 +10,41 @@ interface AnalyticsProps {
 
 export function Analytics({ pageId, userId }: AnalyticsProps) {
   useEffect(() => {
-    // Persist tracker link code for this session so all subsequent events carry it.
-    // sessionStorage (not localStorage) is intentional — it clears when the tab closes,
-    // preventing a visitor who returns organically later from being mis-attributed.
+    // Persist tracker link code/mode before page_view fires so the first event is attributed.
+    // Quick Share stays anonymous, while named tracker links can be carried across sessions.
     try {
-      const tl = new URL(window.location.href).searchParams.get('tl');
-      if (tl) {
-        sessionStorage.setItem('crownpages_tl', tl);
+      const url = new URL(window.location.href);
+      const tl = url.searchParams.get('tl');
+      const mode = url.searchParams.get('cp_track');
 
-        // Also record the real client-side visitor_id in trackable_link_events so
-        // the DB table stays accurate for direct lookups from the mobile app.
-        // Uses a check-then-insert pattern since there's no unique constraint.
-        const visitorId = localStorage.getItem('crownpages_visitor_id');
-        if (visitorId) {
-          import('@/lib/supabase/client').then(({ createClient }) => {
-            const supabase = createClient();
-            supabase
-              .from('trackable_links')
-              .select('id')
-              .eq('tracking_code', tl)
-              .maybeSingle()
-              .then(({ data: link }) => {
-                if (link?.id) {
-                  // Only insert if this (link, visitor) pair isn't already recorded
-                  supabase
-                    .from('trackable_link_events')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('trackable_link_id', link.id)
-                    .eq('visitor_id', visitorId)
-                    .then(({ count }) => {
-                      if (!count) {
-                        supabase.from('trackable_link_events').insert({
-                          trackable_link_id: link.id,
-                          visitor_id: visitorId,
-                          event_type: 'view',
-                        }).then(() => {});
-                      }
-                    });
-                }
-              });
-          });
-        }
+      if (window.location.pathname.startsWith('/share/')) {
+        sessionStorage.setItem('crownpages_attribution_mode', 'quick_share');
+        sessionStorage.removeItem('crownpages_tl');
+      } else if (tl) {
+        sessionStorage.setItem('crownpages_tl', tl);
+        sessionStorage.setItem(
+          'crownpages_attribution_mode',
+          mode === 'anonymous' || mode === 'quick_share' ? 'anonymous' : 'contact',
+        );
       }
     } catch { /* ignore */ }
 
     trackPageView(pageId, userId);
 
     let startTime = Date.now();
+    let exitTrackedForCurrentView = false;
 
-    const handleBeforeUnload = () => {
+    const trackExitOnce = () => {
+      if (exitTrackedForCurrentView) return;
       const seconds = Math.round((Date.now() - startTime) / 1000);
       if (seconds > 0) {
+        exitTrackedForCurrentView = true;
         trackPageExit(pageId, seconds, userId);
       }
+    };
+
+    const handleBeforeUnload = () => {
+      trackExitOnce();
     };
 
     // visibilitychange fires reliably on mobile browsers (iOS Safari, Android Chrome)
@@ -71,13 +53,12 @@ export function Analytics({ pageId, userId }: AnalyticsProps) {
     // so that a visitor who returns is tracked as a fresh dwell period.
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        const seconds = Math.round((Date.now() - startTime) / 1000);
-        if (seconds > 0) {
-          trackPageExit(pageId, seconds, userId);
-        }
+        trackExitOnce();
         startTime = Date.now();
+        exitTrackedForCurrentView = false;
       } else if (document.visibilityState === 'visible') {
         startTime = Date.now();
+        exitTrackedForCurrentView = false;
       }
     };
 
@@ -87,10 +68,7 @@ export function Analytics({ pageId, userId }: AnalyticsProps) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       // Also fire on React unmount (SPA navigation)
-      const seconds = Math.round((Date.now() - startTime) / 1000);
-      if (seconds > 0) {
-        trackPageExit(pageId, seconds, userId);
-      }
+      trackExitOnce();
     };
   }, [pageId, userId]);
 
@@ -113,4 +91,4 @@ export function BusinessPageAnalytics({ businessPageId, businessId, userId }: Bu
   }, [businessPageId, businessId, userId]);
 
   return null; // This component doesn't render anything
-} 
+}

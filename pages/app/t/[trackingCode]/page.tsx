@@ -1,5 +1,10 @@
+import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { after } from 'next/server';
+import { cache } from 'react';
 import { createClient } from '@/lib/supabase/server';
+import { getUploadPublicUrl } from '@/lib/upload-public-url';
+import { getCurrentWhiteLabelTenant } from '@/lib/white-label-tenants';
 import { headers } from 'next/headers';
 
 interface TrackingPageProps {
@@ -7,29 +12,149 @@ interface TrackingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function TrackingPage({ params, searchParams }: TrackingPageProps) {
-  const { trackingCode } = await params;
-  const query = await searchParams;
-  
+const getTrackableLinkData = cache(async (trackingCode: string) => {
   const supabase = await createClient();
-
-  // Get the trackable link data
-  const { data: trackableLink, error } = await supabase
+  return supabase
     .from('trackable_links')
     .select(`
-      *,
+      id,
+      name,
+      description,
+      expires_at,
+      max_clicks,
+      click_count,
+      unique_click_count,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_term,
+      utm_content,
+      redirect_delay,
+      show_preview,
       page:pages(
-        *,
-        business:businesses(*)
+        title,
+        description,
+        meta_title,
+        meta_description,
+        og_description,
+        og_image_url,
+        content,
+        slug,
+        business:businesses(name, slug)
       ),
       business_page:business_pages(
-        *,
-        business:businesses(*)
+        title,
+        description,
+        logo_url,
+        business:businesses(name, slug, logo_url)
       )
     `)
     .eq('tracking_code', trackingCode)
     .eq('is_active', true)
     .single();
+});
+
+function firstRelation<T>(relation: T | T[] | null | undefined) {
+  return Array.isArray(relation) ? relation[0] : relation;
+}
+
+export async function generateMetadata({ params }: TrackingPageProps): Promise<Metadata> {
+  const { trackingCode } = await params;
+  const [{ data: trackableLink }, tenant] = await Promise.all([
+    getTrackableLinkData(trackingCode),
+    getCurrentWhiteLabelTenant(),
+  ]);
+
+  if (!trackableLink) {
+    return {
+      title: `Page Not Found | ${tenant.publicName}`,
+      description: 'The page you are looking for does not exist.',
+    };
+  }
+
+  const linkedPage = firstRelation(trackableLink.page);
+  if (linkedPage) {
+    const business = firstRelation(linkedPage.business);
+    const businessName = business?.name || tenant.publicName;
+    const title = linkedPage.meta_title || linkedPage.title;
+    const heroSubtitle = (() => {
+      try {
+        const content = linkedPage.content as {
+          sections?: Array<{ type: string; data: Record<string, string> }>;
+        } | null;
+        const hero = content?.sections?.find((section) => section.type === 'hero');
+        return hero?.data?.subtitle || null;
+      } catch {
+        return null;
+      }
+    })();
+    const description =
+      linkedPage.og_description ||
+      linkedPage.meta_description ||
+      heroSubtitle ||
+      linkedPage.description ||
+      `${linkedPage.title} - ${businessName}`;
+    const image =
+      getUploadPublicUrl(linkedPage.og_image_url) ||
+      `/api/og?title=${encodeURIComponent(linkedPage.title)}&business=${encodeURIComponent(businessName)}`;
+
+    return {
+      title: `${title} | ${tenant.publicName}`,
+      description,
+      openGraph: {
+        title,
+        description,
+        images: [{ url: image }],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [image],
+      },
+    };
+  }
+
+  const linkedBusinessPage = firstRelation(trackableLink.business_page);
+  if (linkedBusinessPage) {
+    const business = firstRelation(linkedBusinessPage.business);
+    const businessName = business?.name || tenant.publicName;
+    const title = linkedBusinessPage.title || `Welcome to ${businessName}`;
+    const description = linkedBusinessPage.description || `${businessName} - Connect with us`;
+    const image = getUploadPublicUrl(linkedBusinessPage.logo_url || business?.logo_url);
+
+    return {
+      title: `${title} | ${tenant.publicName}`,
+      description,
+      openGraph: {
+        title,
+        description,
+        ...(image ? { images: [{ url: image }] } : {}),
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        ...(image ? { images: [image] } : {}),
+      },
+    };
+  }
+
+  return {
+    title: tenant.publicName,
+    description: `View this page on ${tenant.publicName}.`,
+  };
+}
+
+export default async function TrackingPage({ params, searchParams }: TrackingPageProps) {
+  const { trackingCode } = await params;
+  const query = await searchParams;
+  const [{ data: trackableLink, error }, supabase] = await Promise.all([
+    getTrackableLinkData(trackingCode),
+    createClient(),
+  ]);
 
   if (error || !trackableLink) {
     notFound();
@@ -53,85 +178,123 @@ export default async function TrackingPage({ params, searchParams }: TrackingPag
   const xRealIp = headersList.get('x-real-ip') || '';
   const cfConnectingIp = headersList.get('cf-connecting-ip') || '';
   const cfIpCountry = headersList.get('cf-ipcountry') || '';
+  const purpose = headersList.get('purpose') || '';
+  const secPurpose = headersList.get('sec-purpose') || '';
+  const xPurpose = headersList.get('x-purpose') || '';
+  const cfTimezone = headersList.get('cf-timezone') || null;
+  const cfRay = headersList.get('cf-ray');
+  const acceptLanguage = headersList.get('accept-language');
   
   // Extract IP address (prioritize CF if available, then x-forwarded-for)
   const ipAddress = cfConnectingIp || xRealIp || xForwardedFor?.split(',')[0]?.trim() || '';
   
   // Parse user agent for device/browser info
   const deviceInfo = parseUserAgent(userAgent);
-  
-  // Generate unique visitor ID based on IP + User Agent for session tracking
-  const visitorFingerprint = `${ipAddress}-${userAgent}`.replace(/[^\w-]/g, '');
-  const visitorId = `web_${btoa(visitorFingerprint).substring(0, 12)}_${Date.now().toString().slice(-6)}`;
+  const visitorId = generateStableVisitorId(ipAddress, userAgent);
   const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Track the view with enhanced data
-  await supabase.from('trackable_link_events').insert({
-    trackable_link_id: trackableLink.id,
-    event_type: 'view',
-    visitor_id: visitorId,
-    session_id: sessionId,
-    device_type: deviceInfo.deviceType,
-    browser: deviceInfo.browser,
-    browser_version: deviceInfo.browserVersion,
-    os: deviceInfo.os,
-    os_version: deviceInfo.osVersion,
-    user_agent: userAgent,
-    referrer: referer || null,
-    ip_address: ipAddress || null,
-    country: cfIpCountry || null,
-    timezone: headersList.get('cf-timezone') || null,
-    event_data: { 
-      access_method: 'short_url',
-      query_params: query,
-      headers: {
-        'x-forwarded-for': xForwardedFor,
-        'cf-ray': headersList.get('cf-ray'),
-        'accept-language': headersList.get('accept-language'),
-      }
-    }
+  const isBotRequest = isLikelyBotRequest({
+    userAgent,
+    purpose,
+    secPurpose,
+    xPurpose,
   });
 
-  // Check if this is a unique visitor for this link
-  const { data: existingEvents } = await supabase
-    .from('trackable_link_events')
-    .select('id')
-    .eq('trackable_link_id', trackableLink.id)
-    .eq('visitor_id', visitorId)
-    .limit(1);
+  if (!isBotRequest) {
+    // QR scans should never wait for analytics. Next.js keeps this callback alive
+    // after the redirect response has been sent, so the destination can start
+    // rendering immediately while scan counts are recorded in the background.
+    after(async () => {
+      try {
+        const { data: existingEvents, error: existingEventsError } = await supabase
+          .from('trackable_link_events')
+          .select('id')
+          .eq('trackable_link_id', trackableLink.id)
+          .eq('visitor_id', visitorId)
+          .limit(1);
 
-  const isUniqueVisitor = !existingEvents || existingEvents.length === 0;
+        if (existingEventsError) {
+          console.error('Unable to check trackable-link uniqueness:', existingEventsError);
+        }
 
-  // Update view counts on the trackable link
-  await supabase
-    .from('trackable_links')
-    .update({
-      click_count: (trackableLink.click_count || 0) + 1,
-      unique_click_count: isUniqueVisitor 
-        ? (trackableLink.unique_click_count || 0) + 1 
-        : (trackableLink.unique_click_count || 0),
-      last_clicked_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', trackableLink.id);
+        const isUniqueVisitor = !existingEvents || existingEvents.length === 0;
+        const { error: eventInsertError } = await supabase.from('trackable_link_events').insert({
+          trackable_link_id: trackableLink.id,
+          event_type: 'view',
+          visitor_id: visitorId,
+          session_id: sessionId,
+          device_type: deviceInfo.deviceType,
+          browser: deviceInfo.browser,
+          browser_version: deviceInfo.browserVersion,
+          os: deviceInfo.os,
+          os_version: deviceInfo.osVersion,
+          user_agent: userAgent,
+          referrer: referer || null,
+          ip_address: ipAddress || null,
+          country: cfIpCountry || null,
+          timezone: cfTimezone,
+          event_data: {
+            access_method: 'short_url',
+            query_params: query,
+            headers: {
+              'x-forwarded-for': xForwardedFor,
+              'cf-ray': cfRay,
+              'accept-language': acceptLanguage,
+              purpose,
+              'sec-purpose': secPurpose,
+              'x-purpose': xPurpose,
+            }
+          }
+        });
+
+        if (eventInsertError) {
+          console.error('Unable to record trackable-link view:', eventInsertError);
+          return;
+        }
+
+        const { error: counterUpdateError } = await supabase
+          .from('trackable_links')
+          .update({
+            click_count: (trackableLink.click_count || 0) + 1,
+            unique_click_count: isUniqueVisitor
+              ? (trackableLink.unique_click_count || 0) + 1
+              : (trackableLink.unique_click_count || 0),
+            last_clicked_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', trackableLink.id);
+
+        if (counterUpdateError) {
+          console.error('Unable to update trackable-link counters:', counterUpdateError);
+        }
+      } catch (analyticsError) {
+        console.error('Trackable-link analytics failed after redirect:', analyticsError);
+      }
+    });
+  }
 
   // Determine the destination URL
   let destinationUrl = '';
+  const linkedPage = firstRelation(trackableLink.page);
+  const linkedBusinessPage = firstRelation(trackableLink.business_page);
   
-  if (trackableLink.page) {
+  if (linkedPage) {
     // Regular page URL
-    const businessSlug = trackableLink.page.business?.slug;
-    const pageSlug = trackableLink.page.slug;
+    const pageBusiness = firstRelation(linkedPage.business);
+    const businessSlug = pageBusiness?.slug;
+    const pageSlug = linkedPage.slug;
     destinationUrl = businessSlug && pageSlug 
       ? `/${businessSlug}/${pageSlug}` 
       : '/';
-  } else if (trackableLink.business_page) {
+  } else if (linkedBusinessPage) {
     // Business page URL
-    const businessSlug = trackableLink.business_page.business?.slug;
+    const pageBusiness = firstRelation(linkedBusinessPage.business);
+    const businessSlug = pageBusiness?.slug;
     destinationUrl = businessSlug ? `/${businessSlug}` : '/';
   }
 
-  // Add UTM parameters + tracking code for named-lead attribution
+  // Add UTM parameters + tracking code for named-lead attribution.
+  // Anonymous tracker links, such as QR/Quick Share links, still keep the tracking
+  // code for scan/click totals but must not inherit a named-contact identity.
   const utmParams = new URLSearchParams();
   if (trackableLink.utm_source) utmParams.set('utm_source', trackableLink.utm_source);
   if (trackableLink.utm_medium) utmParams.set('utm_medium', trackableLink.utm_medium);
@@ -140,6 +303,7 @@ export default async function TrackingPage({ params, searchParams }: TrackingPag
   if (trackableLink.utm_content) utmParams.set('utm_content', trackableLink.utm_content);
   // Always pass tracking code so Analytics component can attribute events to this named link
   utmParams.set('tl', trackingCode);
+  utmParams.set('cp_track', isNamedContactTrackableLink(trackableLink) ? 'contact' : 'anonymous');
 
   destinationUrl += `?${utmParams.toString()}`;
 
@@ -156,6 +320,27 @@ export default async function TrackingPage({ params, searchParams }: TrackingPag
 
   // Immediate redirect
   redirect(destinationUrl);
+}
+
+function isNamedContactTrackableLink(trackableLink: {
+  name?: string | null;
+  utm_source?: string | null;
+}) {
+  const name = trackableLink.name?.trim() || '';
+  const normalizedName = name.toLowerCase();
+  const normalizedSource = trackableLink.utm_source?.trim().toLowerCase() || '';
+
+  if (!name) {
+    return false;
+  }
+
+  return !(
+    normalizedSource === 'qr_code' ||
+    normalizedSource.includes('quick') ||
+    normalizedSource.includes('share') ||
+    normalizedName === 'quick share' ||
+    normalizedName.startsWith('quick share')
+  );
 }
 
 // Enhanced user agent parsing function
@@ -221,6 +406,54 @@ function parseUserAgent(userAgent: string) {
     os,
     osVersion
   };
+}
+
+function generateStableVisitorId(ipAddress: string, userAgent: string) {
+  const fingerprint = `${ipAddress}|${userAgent}`.trim();
+  const encoded = Buffer.from(fingerprint || 'unknown-visitor', 'utf8')
+    .toString('base64')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, 24);
+
+  return `web_${encoded}`;
+}
+
+function isLikelyBotRequest({
+  userAgent,
+  purpose,
+  secPurpose,
+  xPurpose,
+}: {
+  userAgent: string;
+  purpose: string;
+  secPurpose: string;
+  xPurpose: string;
+}) {
+  const ua = userAgent.toLowerCase();
+  const joinedPurpose = `${purpose} ${secPurpose} ${xPurpose}`.toLowerCase();
+
+  if (joinedPurpose.includes('prefetch') || joinedPurpose.includes('preview')) {
+    return true;
+  }
+
+  return [
+    'bot',
+    'crawler',
+    'spider',
+    'preview',
+    'slackbot',
+    'facebookexternalhit',
+    'whatsapp',
+    'discordbot',
+    'telegrambot',
+    'linkedinbot',
+    'twitterbot',
+    'googlebot',
+    'bingbot',
+    'headless',
+    'python-requests',
+    'curl/',
+  ].some((token) => ua.includes(token));
 }
 
 // Component for handling delayed redirects or previews

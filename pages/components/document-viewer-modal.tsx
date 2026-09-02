@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Download } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { MuxVideoPlayer } from './MuxVideoPlayer';
 import { resolveVideoUrl } from '@/lib/resolve-video-url';
 
@@ -56,14 +57,38 @@ export function DocumentViewerModal({
 }: DocumentViewerModalProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [scale, setScale] = useState<number>(1.0);
+  const [pdfBaseScale, setPdfBaseScale] = useState<number | null>(null);
+  const [firstPageWidth, setFirstPageWidth] = useState<number | null>(null);
+  const pdfViewportRef = useRef<HTMLDivElement | null>(null);
+  const detectedFileType = fileType === 'unknown' ? detectFileType(fileUrl) : fileType;
 
-  // Set initial scale when modal opens, based on screen size
+  // Set initial scale when modal opens.
   useEffect(() => {
     if (isOpen && typeof window !== 'undefined') {
-      const initialScale = window.innerWidth < 768 ? 0.85 : 1;
-      setScale(initialScale);
+      setScale(1);
+      setPdfBaseScale(null);
+      setFirstPageWidth(null);
     }
   }, [isOpen]);
+
+  // Dynamically fit PDFs to the available viewport width on open and resize.
+  useEffect(() => {
+    if (!isOpen || detectedFileType !== 'pdf' || !firstPageWidth) return;
+
+    const updatePdfScale = () => {
+      const containerWidth = pdfViewportRef.current?.clientWidth;
+      if (!containerWidth) return;
+
+      // Leave a small inset so the page edge does not clip against the modal.
+      const fittedScale = Math.min(Math.max((containerWidth - 8) / firstPageWidth, 0.45), 2.5);
+      setPdfBaseScale(fittedScale);
+      setScale(fittedScale);
+    };
+
+    updatePdfScale();
+    window.addEventListener('resize', updatePdfScale);
+    return () => window.removeEventListener('resize', updatePdfScale);
+  }, [detectedFileType, firstPageWidth, isOpen]);
 
   // Lock body scroll while modal is open so the page behind cannot be scrolled
   useEffect(() => {
@@ -79,11 +104,13 @@ export function DocumentViewerModal({
   // When mediaItems is passed, render the stack viewer instead of a single file
   const isMediaStack = mediaItems && mediaItems.length > 0;
 
-  // Detect file type from URL if not provided
-  const detectedFileType = fileType === 'unknown' ? detectFileType(fileUrl) : fileType;
-
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
+  }
+
+  function onPdfPageLoadSuccess(page: { view?: number[] }) {
+    if (firstPageWidth || !page.view?.[2]) return;
+    setFirstPageWidth(page.view[2]);
   }
 
   const handleDownload = () => {
@@ -171,10 +198,14 @@ export function DocumentViewerModal({
                     className="w-full rounded-xl overflow-hidden shadow-2xl bg-black/10"
                     style={{ transform: `scale(${scale})`, transformOrigin: 'top center', transition: 'transform 0.15s ease' }}
                   >
-                    <img
+                    {/* Dynamic upload URLs are rendered unoptimized on purpose. */}
+                    <Image
                       src={mediaUrl}
                       alt={`Item ${idx + 1}`}
-                      className="w-full object-contain block"
+                      width={1600}
+                      height={1200}
+                      unoptimized
+                      className="w-full h-auto object-contain block"
                       draggable={false}
                     />
                   </div>
@@ -207,7 +238,7 @@ export function DocumentViewerModal({
 
           {/* ---- Single-file modes (only when not media stack) ---- */}
           {!isMediaStack && detectedFileType === 'pdf' && (
-            <div className="flex flex-col items-center w-full">
+            <div ref={pdfViewportRef} className="flex flex-col items-center w-full">
               <Document
                 file={fileUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
@@ -236,6 +267,7 @@ export function DocumentViewerModal({
                     key={`page_${index + 1}`}
                     pageNumber={index + 1}
                     scale={scale}
+                    onLoadSuccess={index === 0 ? onPdfPageLoadSuccess : undefined}
                     renderTextLayer={false}
                     renderAnnotationLayer={false}
                     className="shadow-2xl"
@@ -252,7 +284,9 @@ export function DocumentViewerModal({
               {numPages > 0 && (
                 <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm rounded-lg px-6 py-3 flex items-center gap-4 z-10">
                   <button
-                    onClick={() => setScale((s) => Math.max(s - 0.05, 0.5))}
+                    onClick={() =>
+                      setScale((s) => Math.max(s - 0.05, Math.min(pdfBaseScale ?? 0.5, s)))
+                    }
                     className="px-3 py-1 hover:bg-white/10 rounded transition-colors text-white"
                   >
                     −
@@ -281,10 +315,14 @@ export function DocumentViewerModal({
                 style={{ transform: `scale(${scale})`, transformOrigin: 'top center', transition: 'transform 0.15s ease' }}
                 className="w-full"
               >
-                <img
+                {/* Arbitrary uploaded image URLs are rendered unoptimized here. */}
+                <Image
                   src={fileUrl}
                   alt={fileName || 'Image'}
-                  className="max-w-full object-contain mx-auto block shadow-2xl"
+                  width={1600}
+                  height={1200}
+                  unoptimized
+                  className="max-w-full h-auto object-contain mx-auto block shadow-2xl"
                   draggable={false}
                 />
               </div>
@@ -364,4 +402,3 @@ function detectFileType(url: string): 'pdf' | 'image' | 'video' | 'unknown' {
   
   return 'unknown';
 }
-

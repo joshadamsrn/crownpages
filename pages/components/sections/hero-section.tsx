@@ -5,6 +5,7 @@ import { BusinessData } from '@crown-pages/types';
 import { SectionStyles } from '@/types';
 import Image from 'next/image';
 import { ShareButton } from '@/components/share-button';
+import { PageSaveSheet } from '@/components/page-save-sheet';
 
 interface HeroData {
   title?: string;
@@ -27,7 +28,17 @@ interface HeroSectionProps {
   styles?: SectionStyles;
   pageUrl?: string;
   pageTitle?: string;
+  pageSlug?: string;
+  businessSlug?: string;
+  brochureSections?: Array<{ type: string; data: Record<string, unknown> }>;
   isPreview?: boolean;
+  companyHeaderAddress?: string;
+  contactCardData?: {
+    name?: string;
+    contactName?: string;
+    phone?: string;
+    email?: string;
+  } | null;
 }
 
 // Helper to get full Supabase URL
@@ -39,7 +50,19 @@ const getImageUrl = (path: string | undefined) => {
   return `${supabaseUrl}/storage/v1/object/public/uploads/${path}`;
 };
 
-export function HeroSection({ data, pageUrl, pageTitle, business, pageId, isPreview = false }: HeroSectionProps) {
+export function HeroSection({
+  data,
+  pageUrl,
+  pageTitle,
+  pageSlug,
+  businessSlug,
+  brochureSections,
+  business,
+  pageId,
+  isPreview = false,
+  companyHeaderAddress,
+  contactCardData,
+}: HeroSectionProps) {
   const { backgroundImage, heroImage, logoUrl, logo, title, subtitle } = data;
   const [heroKey, setHeroKey] = useState(Date.now());
   const [logoKey, setLogoKey] = useState(Date.now());
@@ -64,11 +87,11 @@ export function HeroSection({ data, pageUrl, pageTitle, business, pageId, isPrev
   return (
     <section className="relative w-full">
       {/* Mobile: Full-width, Desktop: Contained with max-width */}
-      <div className="relative w-full md:max-w-5xl md:mx-auto md:py-4 md:px-4">
+      <div className="relative w-full md:mx-auto md:max-w-5xl md:px-4 md:py-5">
         {/* Wrapper with overflow visible to allow logo to extend outside */}
         <div className="relative w-full overflow-visible">
           {/* Hero Image Container */}
-          <div className="relative w-full h-[300px] md:h-[400px] lg:h-[500px] md:rounded-xl overflow-hidden">
+          <div className="relative h-[300px] w-full overflow-hidden md:h-[400px] lg:h-[500px] md:rounded-[30px] md:shadow-[0_30px_70px_rgba(15,23,42,0.18)]">
             {fullHeroUrl ? (
               <div className="relative w-full h-full">
                 <Image
@@ -82,6 +105,7 @@ export function HeroSection({ data, pageUrl, pageTitle, business, pageId, isPrev
                   priority
                   unoptimized
                 />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/12 via-transparent to-black/18" />
               </div>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
@@ -100,14 +124,42 @@ export function HeroSection({ data, pageUrl, pageTitle, business, pageId, isPrev
 
             {/* Share Button Overlay - inside hero container */}
             {fullHeroUrl && (
-              <div className={`absolute ${isPreview ? 'top-16' : 'top-4'} right-4 z-20`}>
-                <ShareButton 
-                  url={pageUrl}
-                  title={pageTitle || business?.name || 'Check this out!'}
-                  text={`Check out ${pageTitle || business?.name || 'this page'}!`}
-                  pageId={pageId}
-                />
-              </div>
+              <>
+                <div className={`absolute ${isPreview ? 'top-4' : 'top-4'} left-4 z-20 flex flex-col items-center gap-1.5`}>
+                  <PageSaveSheet
+                    pageId={pageId}
+                    pageUrl={pageUrl}
+                    pageTitle={pageTitle || title || business?.name}
+                    pageSlug={pageSlug}
+                    businessSlug={businessSlug || (business as BusinessData & { slug?: string })?.slug}
+                    brochureSections={brochureSections}
+                    businessName={business?.name}
+                    address={companyHeaderAddress}
+                    phone={contactCardData?.phone}
+                    email={contactCardData?.email}
+                    contactName={contactCardData?.name || contactCardData?.contactName}
+                    heroImageUrl={fullHeroUrl}
+                    logoUrl={fullLogoUrl}
+                    triggerClassName="items-center"
+                  />
+                  <span className="text-[12px] font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]">
+                    Save
+                  </span>
+                </div>
+                <div className={`absolute ${isPreview ? 'top-4' : 'top-4'} right-4 z-20 flex flex-col items-center gap-1.5`}>
+                  <ShareButton
+                    url={pageUrl}
+                    title={pageTitle || business?.name || 'Check this out!'}
+                    text=""
+                    pageId={pageId}
+                    showLabel={true}
+                    triggerClassName="items-center"
+                  />
+                  <span className="text-[12px] font-black uppercase tracking-[0.04em] text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.75)]">
+                    Share
+                  </span>
+                </div>
+              </>
             )}
           </div>
 

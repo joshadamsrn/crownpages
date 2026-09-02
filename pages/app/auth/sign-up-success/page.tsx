@@ -5,6 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function Page() {
   return (
@@ -14,15 +16,19 @@ export default function Page() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Thank you for signing up!
+                Account created
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription>
+                You successfully created your account.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                Continue to your pages dashboard to start using CrownPages.
               </p>
+              <Button asChild className="w-full">
+                <Link href="/protected/pages">OK</Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

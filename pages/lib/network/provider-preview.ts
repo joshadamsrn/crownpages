@@ -1,0 +1,42 @@
+import type { NetworkProviderReferral } from "@/lib/network/provider-referral-types";
+
+export const NETWORK_PROVIDER_PREVIEW_REFERRAL: NetworkProviderReferral = {
+  referralId: "10000000-0000-4000-8000-000000000001",
+  referralFacilityId: "20000000-0000-4000-8000-000000000001",
+  facilityId: "30000000-0000-4000-8000-000000000001",
+  facilityName: "Acacia Springs Independent Living",
+  attributionCode: "CN-SAMPLE-7K4D2",
+  status: "viewed",
+  deliveredAt: "2026-09-01T16:05:00.000Z",
+  accessExpiresAt: "2026-09-15T16:05:00.000Z",
+  tourScheduledAt: null,
+  placement: null,
+  family: {
+    firstName: "Jordan",
+    lastName: "Lee (Sample)",
+    email: "jordan.sample@example.com",
+    phone: null,
+    preferredContactMethod: "email",
+    relationship: "adult-child",
+  },
+  search: {
+    desiredCity: "Las Vegas",
+    desiredState: "Nevada",
+    desiredZipCode: "89117",
+    radiusMiles: 25,
+    careTypes: ["Independent Living"],
+    moveTimeframe: "one-to-three-months",
+    budgetLow: 3000,
+    budgetHigh: 5000,
+    supportNeeds: ["Meals and housekeeping", "Transportation"],
+    preferences: ["Active social calendar", "Outdoor space", "Close to family"],
+    additionalNotes: "Sample request: prefers a lively community near family on the west side.",
+  },
+  consent: {
+    version: "2026-09-01-v1",
+    grantedAt: "2026-09-01T15:12:00.000Z",
+    allowEmail: true,
+    allowPhone: false,
+    allowSms: false,
+  },
+};

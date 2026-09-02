@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-06-30.basil',
-});
-
 export async function POST(req: NextRequest) {
     try {
+        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeSecretKey) {
+            return NextResponse.json({ error: 'Billing is not configured.' }, { status: 503 });
+        }
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-06-30.basil' });
         const supabase = await createClient();
 
         // Verify user is authenticated

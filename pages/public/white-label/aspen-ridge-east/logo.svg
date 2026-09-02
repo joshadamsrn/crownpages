@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Advanced Health Care</title>
+  <desc id="desc">Advanced Health Care logo mark with black A, bronze and silver swooshes, and wordmark.</desc>
+  <rect width="1024" height="1024" fill="#ffffff"/>
+  <g transform="translate(175 60)">
+    <path d="M198 39 25 426h101l41-94h164l-38-86h-88l50-116 135 296h107L291 39z" fill="#050505"/>
+    <path d="M317 175c152-37 296-19 323 45 28 66-76 151-251 209 126-55 202-126 181-174-22-51-130-67-253-37z" fill="#b08d57"/>
+    <path d="M279 127c201-65 399-41 445 54 48 100-76 225-292 303 160-80 251-178 213-251-39-75-193-92-366-46z" fill="none" stroke="#8f8f8f" stroke-width="32" stroke-linecap="round"/>
+    <path d="M284 126c193-59 373-33 413 58 8 19 10 39 6 60-7-121-223-158-419-86z" fill="#d7d7d7"/>
+  </g>
+  <g fill="#9a6b36" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="512" y="672" font-size="92" letter-spacing="10">ADVANCED</text>
+  </g>
+  <g fill="#777777" font-family="Arial, Helvetica, sans-serif" text-anchor="middle">
+    <text x="512" y="760" font-size="54" letter-spacing="22">HEALTH CARE</text>
+  </g>
+</svg>

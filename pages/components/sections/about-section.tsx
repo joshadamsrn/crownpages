@@ -43,6 +43,8 @@ export function AboutSection({ data, styles, pageId, sectionId }: AboutSectionPr
   };
 
   const plainTextContent = stripHtml(content || '');
+  const hasBodyContent = plainTextContent.trim().length > 0;
+  const hasVisualContent = Boolean(image);
   const truncatedContent = plainTextContent.length > 150
     ? plainTextContent.slice(0, 150) + '...'
     : plainTextContent;
@@ -60,9 +62,13 @@ export function AboutSection({ data, styles, pageId, sectionId }: AboutSectionPr
     return () => { isMounted = false; };
   }, [image]);
 
+  if (!hasBodyContent && !hasVisualContent) {
+    return null;
+  }
+
   return (
-    <section className="py-4 md:py-8 lg:py-10 px-4" style={{ backgroundColor: styles?.background || '#fff' }}>
-      <div className="max-w-5xl mx-auto">
+    <section className="py-4 md:py-8 lg:py-10">
+      <div className="page-shell-panel overflow-hidden rounded-[32px] px-7 py-7 md:px-10 md:py-10">
         <div
           className={`${
             image ? "grid md:grid-cols-2 gap-6 md:gap-8 lg:gap-12" : ""
@@ -100,7 +106,7 @@ export function AboutSection({ data, styles, pageId, sectionId }: AboutSectionPr
             </p>
 
             {plainTextContent.length > 150 && (
-                <button
+              <button
                 onClick={() => {
                   setShowFullContent(!showFullContent);
                   if (!showFullContent && pageId) {

@@ -20,12 +20,20 @@ import {
   Phone, 
   MapPin, 
   Calendar,
+  Handshake,
   Link as LinkIcon,
   LucideIcon,
   UserPlus,
-  Check
+  Check,
+  Home,
+  Heart,
+  ImageIcon,
+  ListChecks,
+  Video,
+  Utensils
 } from 'lucide-react';
 import { DocumentViewerModal } from '../document-viewer-modal';
+import { ConnectRequestModal } from '../page-engagement-actions';
 import { trackEvent } from '@/lib/analytics';
 
 interface MediaItem {
@@ -81,6 +89,7 @@ interface LinksWithContactSectionProps {
   data: LinksWithContactData;
   business?: BusinessData;
   pageId?: string;
+  pageTitle?: string;
   sectionId?: string;
   styles?: SectionStyles;
 }
@@ -109,6 +118,7 @@ const getIconComponent = (iconName?: string): LucideIcon => {
   
   const iconMap: { [key: string]: LucideIcon } = {
     'web': Globe,
+    'website': Globe,
     'globe': Globe,
     'globe-outline': Globe,
     'instagram': Instagram,
@@ -126,6 +136,21 @@ const getIconComponent = (iconName?: string): LucideIcon => {
     'file': FileText,
     'document': FileText,
     'document-outline': FileText,
+    'floor-plans': FileText,
+    'list': ListChecks,
+    'list-checks': ListChecks,
+    'amenities': ListChecks,
+    'home': Home,
+    'house': Home,
+    'heart': Heart,
+    'heart-outline': Heart,
+    'image': ImageIcon,
+    'photo': ImageIcon,
+    'gallery': ImageIcon,
+    'video': Video,
+    'videocam': Video,
+    'restaurant': Utensils,
+    'dining': Utensils,
     'email': Mail,
     'mail': Mail,
     'mail-outline': Mail,
@@ -146,7 +171,7 @@ const getIconComponent = (iconName?: string): LucideIcon => {
   return iconMap[lowerIconName] || LinkIcon;
 };
 
-export function LinksWithContactSection({ data, business, pageId, sectionId, styles }: LinksWithContactSectionProps) {
+export function LinksWithContactSection({ data, business, pageId, pageTitle, sectionId, styles }: LinksWithContactSectionProps) {
   const { title, links, contactButton, contactName, contactRole, contactPhone, contactPhone2, contactEmail, contactFax, contactWebsite, contactImageUrl } = data;
   const displayTitle = title && title.trim() !== '' ? title : 'Pages';
   const theme = useTheme();
@@ -159,6 +184,7 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
   const [localModalVisible, setLocalModalVisible] = useState(false);
   const [isAnimatingIn, setIsAnimatingIn] = useState(false);
   const [isContactSaved, setIsContactSaved] = useState(false);
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   // Lock body scroll while contact drawer is open
   useEffect(() => {
@@ -423,22 +449,21 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
   return (
     <>
       <section
-        className="pb-8 md:pb-12 px-4"
-        style={{ backgroundColor: styles?.background || '#fff' }}
+        className="py-4 md:py-8 lg:py-10"
+        style={{ backgroundColor: styles?.background || 'transparent' }}
       >
-        <div className="max-w-5xl mx-auto">
+        <div className="page-shell-panel overflow-hidden rounded-[32px] px-7 py-7 md:px-10 md:py-9">
           {/* Pages Section (Formerly Links), uses LinkswithContact which is legacy spaghetti code*/}
           {hasLinks && (
-            <div className="pt-6">
+            <div>
               {/* Header */}
-              <div className="mb-4 md:mb-6">
-                <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-black">
+              <div className="mb-5 md:mb-7">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">
                   {displayTitle}
                 </h2>
               </div>
 
-              {/* Links Container with border */}
-              <div className="border border-[#E5E5E5] rounded-[3px] bg-white">
+              <div className="bg-transparent">
                 {validLinks.map((link, index) => {
               const isLast = index === validLinks.length - 1;
               const fullImageUrl = getImageUrl(link.image);
@@ -446,13 +471,12 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
 
               const linkContent = (
                 <div
-                  className={`flex items-center justify-between py-4 px-3 ${
-                    !isLast ? 'border-b border-[#E5E5E5]' : ''
+                  className={`flex items-center justify-between px-1 py-4 md:px-2 md:py-5 ${
+                    !isLast ? 'border-b border-slate-200/85' : ''
                   }`}
                 >
                   <div className="flex items-center flex-1">
-                    {/* Thumbnail/Icon Container (60x50px) */}
-                    <div className="w-[60px] h-[50px] rounded-[3px] bg-gray-100 flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                    <div className="mr-4 flex h-[58px] w-[58px] flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 ring-1 ring-slate-200/80">
                       {fullImageUrl ? (
                         <div className="relative w-full h-full">
                           <Image
@@ -464,18 +488,18 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
                           />
                         </div>
                       ) : (
-                        <IconComponent className="w-6 h-6 text-gray-600" />
+                        <IconComponent className="h-6 w-6 text-slate-600" />
                       )}
                     </div>
 
                     {/* Title */}
-                    <span className="text-base font-semibold text-black">
+                    <span className="text-[1.05rem] font-bold text-slate-950">
                       {link.title}
                     </span>
                   </div>
 
                   {/* Chevron */}
-                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 flex-shrink-0 text-slate-400" />
                 </div>
               );
 
@@ -530,15 +554,15 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
 
           {/* Contact Button */}
           {showContactButton && (
-            <div className="mt-6 mb-[20px] md:mb-6">
+            <div className="mt-6 mb-[20px] md:mb-2">
               <button
-              onClick={handleContactClick}
-              className="w-full bg-[#63b5f7] text-white text-lg font-semibold py-4 rounded-full shadow-lg hover:shadow-xl transition-all"
-              style={{
-                boxShadow: '0 4px 8px rgba(99, 181, 247, 0.3)',
-              }}
-            >
-              Contact
+                onClick={handleContactClick}
+                className="w-full rounded-full px-6 py-4 text-lg font-semibold text-white shadow-[0_22px_44px_rgba(15,23,42,0.14)] transition-all hover:-translate-y-0.5 hover:shadow-[0_28px_48px_rgba(15,23,42,0.16)]"
+                style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+                }}
+              >
+                Contact
               </button>
             </div>
           )}
@@ -578,10 +602,12 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
             {effectiveContactData.contactImageUrl && (
               <div className="sticky top-[73px] bg-white pt-4 pb-2 px-6 flex justify-center z-10 border-b border-gray-100">
                 <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-gray-100 border-2 border-gray-200">
-                  <img
+                  <Image
                     src={getImageUrl(effectiveContactData.contactImageUrl) || ''}
                     alt={effectiveContactData.contactName || 'Contact'}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="112px"
+                    className="object-cover"
                   />
                 </div>
               </div>
@@ -770,10 +796,13 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
                   className={`w-full flex items-center justify-center gap-2 border rounded-lg px-4 py-3 transition-all ${
                     isContactSaved
                       ? 'bg-black border-black'
-                      : 'bg-white border-[#c5c3c3] hover:bg-gray-50'
+                      : 'border-[#0f4fb3] text-[#1b2431] hover:-translate-y-0.5'
                   }`}
                   style={{
-                    borderWidth: '1.5px',
+                    borderWidth: isContactSaved ? '1.5px' : '2px',
+                    background: isContactSaved
+                      ? undefined
+                      : 'linear-gradient(180deg, #ffffff 0%, #edf4ff 100%)',
                   }}
                 >
                   {isContactSaved ? (
@@ -785,19 +814,43 @@ export function LinksWithContactSection({ data, business, pageId, sectionId, sty
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-5 h-5 text-black" />
-                      <span className="font-semibold text-base text-black">
+                      <UserPlus className="w-5 h-5 text-[#0f4fb3]" />
+                      <span className="font-semibold text-base text-[#1b2431]">
                         Save Contact
                       </span>
                     </>
                   )}
                 </button>
+                {pageId && (
+                  <button
+                    onClick={() => setConnectModalOpen(true)}
+                    className="mt-3 w-full flex items-center justify-center gap-2 border rounded-lg px-4 py-3 transition-all border-[#0f4fb3] text-[#1b2431]"
+                    style={{
+                      borderWidth: '2px',
+                      background: 'linear-gradient(180deg, #ffffff 0%, #edf4ff 100%)',
+                    }}
+                  >
+                    <Handshake className="w-5 h-5 text-[#0f4fb3]" />
+                    <span className="font-semibold text-base text-[#1b2431]">
+                      Connect
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
         </>
       ) : null}
+
+      {pageId && (
+        <ConnectRequestModal
+          isOpen={connectModalOpen}
+          onClose={() => setConnectModalOpen(false)}
+          pageId={pageId}
+          pageTitle={pageTitle || business?.name || 'this page'}
+        />
+      )}
 
       {/* Document Viewer Modal */}
       {currentDocument && (

@@ -11,6 +11,7 @@ import {
   BusinessData,
 } from '@crown-pages/types';
 import Head from 'next/head';
+import Image from 'next/image';
 
 // Import existing section components
 import type { Database } from '@/database.types';
@@ -23,6 +24,7 @@ import { DocumentsSection } from './sections/documents-section';
 import { FAQSection } from './sections/faq-section';
 import { FeaturesSection } from './sections/features-section';
 import { GallerySection } from './sections/gallery-section';
+import { MobilePreviewGallerySection } from './sections/mobile-preview-gallery-section';
 import { HeroSection } from './sections/hero-section';
 import { TestimonialsSection } from './sections/testimonials-section';
 import { LinksSection } from './sections/links-section';
@@ -33,6 +35,8 @@ import { CompanyHeaderSection } from './sections/company-header-section';
 import { ContactCardSection } from './sections/contact-card-section';
 import { AmenitiesSection } from './sections/amenities-section';
 import { SocialLinksSection } from './sections/social-links-section';
+import { PageEngagementActions } from './page-engagement-actions';
+import { getPageEngagementSettings, pageSupportsLeadActions } from '@/lib/page-engagement';
 
 export interface SectionData {
   id: string;
@@ -271,8 +275,12 @@ export const EnhancedSectionRenderer = ({
   styles,
   pageUrl,
   pageTitle,
+  pageSlug,
+  businessSlug,
+  brochureSections,
   isPreview,
   companyHeaderAddress,
+  contactCardData,
 }: {
   section: SectionData;
   business: BusinessData;
@@ -280,8 +288,12 @@ export const EnhancedSectionRenderer = ({
   styles?: SectionStyles;
   pageUrl?: string;
   pageTitle?: string;
+  pageSlug?: string;
+  businessSlug?: string;
+  brochureSections?: SectionData[];
   isPreview?: boolean;
   companyHeaderAddress?: string;
+  contactCardData?: any;
 }) => {
   // Render contactCard as a visible section
   // (Also keep data for modal compatibility)
@@ -450,13 +462,27 @@ export const EnhancedSectionRenderer = ({
   // Special handling for hero section to pass page URL and title
   const isHeroSection = section.type === 'hero';
   const isContactCardSection = section.type === 'contactCard';
+
+  if (isPreview && section.type === 'gallery') {
+    return (
+      <div className={sectionClass}>
+        <style>{generateSectionCSS(sectionClass)}</style>
+        <MobilePreviewGallerySection data={section.data as any} />
+      </div>
+    );
+  }
+
   const sectionProps = {
     data: section.data,
     business,
     pageId,
+    pageTitle,
+    pageSlug,
+    businessSlug,
     sectionId: section.id,
     styles,
-    ...(isHeroSection && { pageUrl, pageTitle, isPreview }),
+    forceMobileLayout: isPreview,
+    ...(isHeroSection && { pageUrl, pageTitle, pageSlug, businessSlug, brochureSections, isPreview, companyHeaderAddress, contactCardData }),
     ...(isContactCardSection && { companyHeaderAddress }),
   };
 
@@ -466,7 +492,7 @@ export const EnhancedSectionRenderer = ({
       {isFullWidth || isHeroSection ? (
         <SectionComponent {...sectionProps} />
       ) : (
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-0">
           <SectionComponent {...sectionProps} />
         </div>
       )}
@@ -583,12 +609,17 @@ export function EnhancedPageRenderer({
     '--accent-color': theme.accent,
     '--background-color': theme.background,
     '--surface-color': theme.surface,
+    '--surface-elevated': '#ffffff',
+    '--surface-muted': 'rgba(255, 255, 255, 0.72)',
+    '--surface-outline': 'rgba(15, 23, 42, 0.08)',
+    '--surface-shadow': '0 22px 44px rgba(15, 23, 42, 0.08)',
     '--text-primary': theme.text.primary,
     '--text-secondary': theme.text.secondary,
     '--text-muted': theme.text.muted,
     '--font-family': theme.fontFamily,
     fontFamily: `${theme.fontFamily}, system-ui, -apple-system, sans-serif`,
-    backgroundColor: theme.background,
+    background:
+      'radial-gradient(circle at top, rgba(255,255,255,0.96) 0%, rgba(245,247,250,0.98) 32%, rgba(239,243,248,1) 100%)',
     color: theme.text.primary,
   } as React.CSSProperties;
 
@@ -632,43 +663,60 @@ export function EnhancedPageRenderer({
     openContactModal,
     contactCardData,
   };
+  const pageFeatureSettings = getPageEngagementSettings(
+    pageData.publish_settings as Record<string, unknown> | null | undefined
+  );
+  const showLeadActions =
+    pageSupportsLeadActions(content.sections) &&
+    (pageFeatureSettings.includeInstaConnect ||
+      pageFeatureSettings.includeScheduleMeeting);
 
   return (
     <>
       <SEOHead pageData={pageData} business={safeBusinessData} />
       <ThemeContext.Provider value={theme}>
         <ContactModalContext.Provider value={contactModalContextValue}>
-          <div 
-            style={{ ...cssVariables, backgroundColor: theme.background }} 
-            className="min-h-screen flex flex-col"
+          <div
+            style={cssVariables}
+            className={`${isPreview ? 'min-h-full block' : 'min-h-screen flex flex-col'}`}
           >
-            {/* Development Mode Banner */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="bg-blue-600 text-white px-4 py-2 text-sm flex items-center justify-between">
-                <div>
-                  <span className="font-semibold">Enhanced Renderer Active:</span>{' '}
-                  Using shared schema v{SECTION_DEFINITIONS.hero?.version} |{' '}
-                  {content.sections.length} sections loaded
-                </div>
-                <div className="text-xs">
-                  Available: {Object.keys(SECTION_DEFINITIONS).join(', ')}
-                </div>
-              </div>
-            )}
-
-            <div className="flex-1 pb-8">
+            <style>{`
+              .page-shell-panel {
+                background: var(--surface-muted);
+                border: 1px solid var(--surface-outline);
+                box-shadow: var(--surface-shadow);
+                backdrop-filter: blur(18px);
+              }
+            `}</style>
+            <div className={`${isPreview ? 'pb-12' : 'flex-1 pb-12'}`}>
               {content.sections.map((section, index) => (
-                <EnhancedSectionRenderer
-                  key={section.id || `section-${index}`}
-                  section={section}
-                  business={safeBusinessData}
-                  pageId={pageData.id}
-                  styles={section.styles || (styles as unknown as SectionStyles)}
-                  pageUrl={typeof window !== 'undefined' ? window.location.href : ''}
-                  pageTitle={pageData.title}
-                  isPreview={isPreview}
-                  companyHeaderAddress={companyHeaderAddress}
-                />
+                <React.Fragment key={section.id || `section-${index}`}>
+                  <EnhancedSectionRenderer
+                    section={section}
+                    business={safeBusinessData}
+                    pageId={pageData.id}
+                    styles={section.styles || (styles as unknown as SectionStyles)}
+                    pageUrl={typeof window !== 'undefined' ? window.location.href : ''}
+                    pageTitle={pageData.title}
+                    pageSlug={pageData.slug}
+                    businessSlug={(safeBusinessData as BusinessData & { slug?: string }).slug}
+                    brochureSections={content.sections}
+                    isPreview={isPreview}
+                    companyHeaderAddress={companyHeaderAddress}
+                    contactCardData={contactCardData}
+                  />
+                  {showLeadActions && section.type === 'companyHeader' && (
+                    <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-0">
+                      <PageEngagementActions
+                        pageId={pageData.id}
+                        pageTitle={pageData.title}
+                        includeInstaConnect={pageFeatureSettings.includeInstaConnect}
+                        includeScheduleMeeting={pageFeatureSettings.includeScheduleMeeting}
+                        forceMobileLayout={isPreview}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -702,10 +750,12 @@ export function EnhancedPageRenderer({
                   {contactCardData.logo && (
                     <div className="flex justify-center mb-6">
                       <div className="relative w-24 h-24 rounded-xl overflow-hidden">
-                        <img
+                        <Image
                           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${contactCardData.logo}`}
                           alt={contactCardData.contactName || 'Contact'}
-                          className="w-full h-full object-contain p-2"
+                          fill
+                          sizes="96px"
+                          className="object-contain p-2"
                         />
                       </div>
                     </div>

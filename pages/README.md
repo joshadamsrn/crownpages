@@ -30,6 +30,7 @@ A NextJS application that renders CrownPages from JSON content stored in Supabas
 - **Responsive Design**: Mobile-first responsive design that works across all devices
 - **Business Theming**: Dynamic theming based on business brand colors and fonts
 - **Save to Wallet**: Users can save pages to their personal wallet for later access
+- **Apple / Google Wallet APIs**: Web save sheet supports real wallet handoff when issuer credentials are configured
 
 ## Architecture
 
@@ -172,7 +173,13 @@ Example page data:
 ## API Routes
 
 - `GET /api/og` - Open Graph image generation
+- `POST /api/wallet` - Apple Wallet / Google Wallet save handoff
 - Page rendering handles all analytics automatically
+
+## Wallet Setup
+
+Wallet configuration is documented in [docs/wallet-setup.md](./docs/wallet-setup.md).
+Use [pages/.env.wallet.example](./.env.wallet.example) as the variable template when wiring issuer credentials locally.
 
 ## Performance Features
 

@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
+import { CrownPagesPublicShell } from '@/components/crownpages-public-shell';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function OrganizationLayout({ children }: { children: ReactNode }) {
@@ -20,5 +21,11 @@ export default async function OrganizationLayout({ children }: { children: React
     redirect('/auth/organization/login');
   }
 
-  return <>{children}</>;
-} 
+  return (
+    <CrownPagesPublicShell showAccountActions={false}>
+      <div className="crownpages-plans-region flex flex-1 flex-col">
+        {children}
+      </div>
+    </CrownPagesPublicShell>
+  );
+}

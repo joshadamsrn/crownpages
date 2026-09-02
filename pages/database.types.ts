@@ -147,6 +147,64 @@ export type Database = {
           },
         ]
       }
+      kiosk_admins: {
+        Row: {
+          business_id: string
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          invited_by: string
+          last_name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          invited_by: string
+          last_name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          invited_by?: string
+          last_name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_admins_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_admins_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_admins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_page_analytics: {
         Row: {
           browser: string | null

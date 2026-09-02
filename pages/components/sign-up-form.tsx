@@ -12,14 +12,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function SignUpForm({
   className,
+  brandName = "Crown Pages",
+  isWhiteLabel = false,
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+}: React.ComponentPropsWithoutRef<"div"> & {
+  brandName?: string;
+  isWhiteLabel?: boolean;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
@@ -44,24 +50,45 @@ export function SignUpForm({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/protected/pages`,
         },
       });
       if (error) throw error;
       router.push("/auth/sign-up-success");
+      router.refresh();
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="relative overflow-hidden">
+        {isLoading ? (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/82 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Loader2 className="h-9 w-9 animate-spin text-amber-500" />
+              <div>
+                <p className="text-sm font-semibold text-slate-950 dark:text-white">
+                  Creating your account...
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Please wait while we finish setting things up.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
         <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">
+            {isWhiteLabel ? `Create your ${brandName} account` : "Sign up"}
+          </CardTitle>
+          <CardDescription>
+            {isWhiteLabel
+              ? "Use this account to access the branded page workspace."
+              : "Create a new account"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
@@ -75,6 +102,7 @@ export function SignUpForm({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <div className="grid gap-2">
@@ -87,6 +115,7 @@ export function SignUpForm({
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               <div className="grid gap-2">
@@ -99,11 +128,19 @@ export function SignUpForm({
                   required
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : isWhiteLabel
+                    ? "Create workspace account"
+                    : "Sign up"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">

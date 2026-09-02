@@ -1,34 +1,25 @@
 import { NextResponse } from 'next/server';
+import { getCurrentWhiteLabelTenant } from '@/lib/white-label-tenants';
 
 export async function GET() {
+    const tenant = await getCurrentWhiteLabelTenant();
+    const appId = `${tenant.appleTeamId}.${tenant.iosBundleIdentifier}`;
     const appSiteAssociation = {
         "applinks": {
             "apps": [],
             "details": [
                 {
-                    "appID": "643BVN45VK.com.phnteam.pagesmobile",
+                    "appID": appId,
                     "paths": [
-                        // Business pages: /[business-slug]
-                        "/*",
-                        // Individual pages: /[business-slug]/[page-slug] 
-                        "/*/*",
-                        // Share links: /share/[shortCode]
-                        "/share/*",
-                        // Exclude web-only routes
-                        "NOT /api/*",
-                        "NOT /auth/*",
-                        "NOT /protected/*",
-                        "NOT /organization/*",
-                        "NOT /mobile/*",
-                        "NOT /_next/*",
-                        "NOT /favicon.ico",
-                        "NOT /.well-known/*"
+                        // Public Crown Page URLs should open on the live website.
+                        // Keep universal links reserved for explicit app-only paths.
+                        "/app/*"
                     ]
                 }
             ]
         },
         "webcredentials": {
-            "apps": ["643BVN45VK.com.phnteam.pagesmobile"]
+            "apps": [appId]
         }
     };
 

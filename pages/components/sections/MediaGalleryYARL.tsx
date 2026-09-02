@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Captions from 'yet-another-react-lightbox/plugins/captions';
 import MediaGalleryDesktop from './MediaGalleryDesktop';
 import MediaGalleryMobile from './MediaGalleryMobile';
+import { getOptimizedPublicImageUrl } from '@/lib/supabase/client';
 import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/counter.css';
@@ -327,7 +328,7 @@ export default function MediaGalleryYARL({ images, videos, title, wrapperMode = 
         if (slides.length > 0) {
             generateVideoThumbnails();
         }
-    }, [slides.length]);
+    }, [slides, videoRefs]);
 
     // If we're loading, show a skeleton
     if (isLoading) {
@@ -531,11 +532,11 @@ export default function MediaGalleryYARL({ images, videos, title, wrapperMode = 
 
                             return (
                                 <Image
-                                    src={slide.src}
+                                    src={getOptimizedPublicImageUrl(slide.src, { width: 1600, quality: 82, resize: "contain" }) || slide.src}
                                     alt={slide.alt || ""}
                                     width={width}
                                     height={height}
-                                    loading={index >= 0 ? "eager" : "lazy"}
+                                    loading="eager"
                                     decoding="async"
                                     draggable={false}
                                     style={{
@@ -580,7 +581,7 @@ export default function MediaGalleryYARL({ images, videos, title, wrapperMode = 
                         return (
                             <div className="relative" style={{ width: rect.width, height: rect.height }}>
                                 <Image
-                                    src={poster}
+                                    src={getOptimizedPublicImageUrl(poster, { width: 320, quality: 72, resize: "cover" }) || poster}
                                     alt=""
                                     width={rect.width}
                                     height={rect.height}

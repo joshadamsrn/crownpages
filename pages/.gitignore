@@ -48,3 +48,5 @@ pages-mobile
 
 phn-consumer-site-nextjs/
 phn-consumer-site-nextjs
+# Local Netlify folder
+.netlify

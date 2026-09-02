@@ -34,6 +34,7 @@ interface PagesSectionProps {
   pageId?: string;
   sectionId?: string;
   styles?: SectionStyles;
+  forceMobileLayout?: boolean;
 }
 
 const getImageUrl = (path?: string) => {
@@ -48,7 +49,7 @@ const getFileUrl = (path?: string) => {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${path}`;
 };
 
-export function PagesSection({ data, business, pageId, sectionId, styles }: PagesSectionProps) {
+export function PagesSection({ data, business, pageId, sectionId, styles, forceMobileLayout = false }: PagesSectionProps) {
   const { title, pages } = data;
   const displayTitle = title && title.trim() !== '' ? title : 'Pages';
   const theme = useTheme();
@@ -95,33 +96,36 @@ export function PagesSection({ data, business, pageId, sectionId, styles }: Page
   return (
     <>
       <section
-        className="py-8 md:py-12 px-4"
+        className={forceMobileLayout ? "px-4 py-4" : "px-4 py-8 md:py-12"}
         style={{ backgroundColor: styles?.background || '#fff' }}
       >
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-black">
+          <div className={forceMobileLayout ? "mb-4" : "mb-4 md:mb-6"}>
+            <h2 className={`font-bold text-black ${forceMobileLayout ? "text-2xl" : "text-xl md:text-2xl lg:text-3xl"}`}>
               {displayTitle}
             </h2>
           </div>
 
-          {/* Pages Container with border */}
-          <div className="border border-[#E5E5E5] rounded-[3px] bg-white">
+          <div className="bg-white">
             {validPages.map((page, index) => {
               const fullImageUrl = getImageUrl(page.image);
               const isLast = index === validPages.length - 1;
 
               const pageContent = (
                 <div
-                  className={`flex items-center justify-between py-4 px-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                  className={`flex cursor-pointer items-center justify-between py-4 transition-colors hover:bg-gray-50 ${
+                    forceMobileLayout ? "min-h-[102px] px-1" : "px-1 md:px-2"
+                  } ${
                     !isLast ? 'border-b border-[#E5E5E5]' : ''
                   }`}
                   onClick={() => handlePageClick(page)}
                 >
                   <div className="flex items-center flex-1">
-                    {/* Icon/Image Container (60x50px) */}
-                    <div className="w-[60px] h-[50px] rounded-[3px] bg-gray-100 flex items-center justify-center mr-3 overflow-hidden flex-shrink-0">
+                    {/* Icon/Image Container */}
+                    <div className={`flex flex-shrink-0 items-center justify-center overflow-hidden bg-gray-100 ${
+                      forceMobileLayout ? "mr-4 h-[64px] w-[64px] rounded-[18px]" : "mr-4 h-[58px] w-[58px] rounded-2xl"
+                    }`}>
                       {fullImageUrl ? (
                         <div className="relative w-full h-full">
                           <Image
@@ -140,13 +144,13 @@ export function PagesSection({ data, business, pageId, sectionId, styles }: Page
                     </div>
 
                     {/* Title */}
-                    <span className="text-base font-semibold text-black">
+                    <span className={`text-black ${forceMobileLayout ? "text-[1.05rem] font-semibold" : "text-[1.05rem] font-bold"}`}>
                       {page.title}
                     </span>
                   </div>
 
                   {/* Chevron */}
-                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <ChevronRight className={`flex-shrink-0 text-gray-400 ${forceMobileLayout ? "h-5 w-5" : "h-5 w-5"}`} />
                 </div>
               );
 
@@ -227,9 +231,12 @@ function FileViewerModal({ file, onClose }: { file: PageItem; onClose: () => voi
       case 'image':
         return (
           <div className="w-full h-full flex items-center justify-center bg-black">
-            <img
+            <Image
               src={fileUrl}
               alt={file.title}
+              width={1600}
+              height={1200}
+              unoptimized
               className="max-w-full max-h-full object-contain"
             />
           </div>
@@ -306,4 +313,3 @@ function FileViewerModal({ file, onClose }: { file: PageItem; onClose: () => voi
     </div>
   );
 }
-

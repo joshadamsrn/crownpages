@@ -22,6 +22,7 @@ interface AmenitiesSectionProps {
   styles?: SectionStyles;
   pageId?: string;
   sectionId?: string;
+  forceMobileLayout?: boolean;
 }
 
 export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
@@ -29,27 +30,33 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
   styles,
   pageId,
   sectionId,
+  forceMobileLayout = false,
 }) => {
   const { title = 'Amenities', amenities, itemsPerColumn = 4 } = data;
+  const validAmenities = (amenities || []).filter((item) => item?.name?.trim());
   const [showAll, setShowAll] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Detect if we're on mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
+      setIsMobile(forceMobileLayout || window.innerWidth < 768); // md breakpoint
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [forceMobileLayout]);
+
+  if (validAmenities.length === 0) {
+    return null;
+  }
 
   // Desktop: 4 columns × 4 rows = 16 items
   // Mobile: 2 columns × 4 rows = 8 items
   const displayLimit = isMobile ? 8 : 16;
-  const displayedAmenities = showAll ? amenities : amenities.slice(0, displayLimit);
+  const displayedAmenities = showAll ? validAmenities : validAmenities.slice(0, displayLimit);
 
   // Split amenities into columns based on screen size
   const splitIntoColumns = (items: Amenity[]) => {
@@ -90,27 +97,31 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
 
   return (
     <section
-      className="pt-3 md:pt-5 px-4"
+      className="py-4 md:py-8 lg:py-10"
       style={{
-        backgroundColor: styles?.background || '#fff',
+        backgroundColor: styles?.background || 'transparent',
       }}
     >
-      <div className="max-w-5xl mx-auto">
+      <div
+        className={`page-shell-panel overflow-hidden rounded-[32px] ${
+          forceMobileLayout ? "px-7 py-7" : "px-7 py-7 md:px-10 md:py-10"
+        }`}
+      >
         {/* Header */}
         <div className="mb-4 md:mb-6">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black">
+          <h2 className={`font-bold text-black ${forceMobileLayout ? "text-2xl" : "text-2xl md:text-3xl lg:text-4xl"}`}>
             {title}
           </h2>
         </div>
 
         {/* Amenities List in 4 Columns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 md:gap-x-6 mb-2">
+        <div className={`mb-2 grid gap-x-4 ${forceMobileLayout ? "grid-cols-2" : "grid-cols-2 md:grid-cols-4 md:gap-x-6"}`}>
           {/* Column 1 */}
           <div>
             {column1.map((item) => (
-              <div key={item.id} className="flex items-start mb-2 md:mb-3">
-                <span className="text-lg md:text-xl font-bold text-black mr-2 md:mr-3 mt-0">•</span>
-                <span className="text-[15px] md:text-base lg:text-lg text-gray-800 leading-[22px] md:leading-7 flex-1">
+              <div key={item.id} className={`flex items-start ${forceMobileLayout ? "mb-2" : "mb-2 md:mb-3"}`}>
+                <span className={`mt-0 mr-2 font-bold text-black ${forceMobileLayout ? "text-lg" : "text-lg md:mr-3 md:text-xl"}`}>•</span>
+                <span className={`flex-1 text-gray-800 ${forceMobileLayout ? "text-[15px] leading-[22px]" : "text-[15px] leading-[22px] md:text-base md:leading-7 lg:text-lg"}`}>
                   {item.name}
                 </span>
               </div>
@@ -120,9 +131,9 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
           {/* Column 2 */}
           <div>
             {column2.map((item) => (
-              <div key={item.id} className="flex items-start mb-2 md:mb-3">
-                <span className="text-lg md:text-xl font-bold text-black mr-2 md:mr-3 mt-0">•</span>
-                <span className="text-[15px] md:text-base lg:text-lg text-gray-800 leading-[22px] md:leading-7 flex-1">
+              <div key={item.id} className={`flex items-start ${forceMobileLayout ? "mb-2" : "mb-2 md:mb-3"}`}>
+                <span className={`mt-0 mr-2 font-bold text-black ${forceMobileLayout ? "text-lg" : "text-lg md:mr-3 md:text-xl"}`}>•</span>
+                <span className={`flex-1 text-gray-800 ${forceMobileLayout ? "text-[15px] leading-[22px]" : "text-[15px] leading-[22px] md:text-base md:leading-7 lg:text-lg"}`}>
                   {item.name}
                 </span>
               </div>
@@ -132,9 +143,9 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
           {/* Column 3 */}
           <div>
             {column3.map((item) => (
-              <div key={item.id} className="flex items-start mb-2 md:mb-3">
-                <span className="text-lg md:text-xl font-bold text-black mr-2 md:mr-3 mt-0">•</span>
-                <span className="text-[15px] md:text-base lg:text-lg text-gray-800 leading-[22px] md:leading-7 flex-1">
+              <div key={item.id} className={`flex items-start ${forceMobileLayout ? "mb-2" : "mb-2 md:mb-3"}`}>
+                <span className={`mt-0 mr-2 font-bold text-black ${forceMobileLayout ? "text-lg" : "text-lg md:mr-3 md:text-xl"}`}>•</span>
+                <span className={`flex-1 text-gray-800 ${forceMobileLayout ? "text-[15px] leading-[22px]" : "text-[15px] leading-[22px] md:text-base md:leading-7 lg:text-lg"}`}>
                   {item.name}
                 </span>
               </div>
@@ -144,9 +155,9 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
           {/* Column 4 */}
           <div>
             {column4.map((item) => (
-              <div key={item.id} className="flex items-start mb-2 md:mb-3">
-                <span className="text-lg md:text-xl font-bold text-black mr-2 md:mr-3 mt-0">•</span>
-                <span className="text-[15px] md:text-base lg:text-lg text-gray-800 leading-[22px] md:leading-7 flex-1">
+              <div key={item.id} className={`flex items-start ${forceMobileLayout ? "mb-2" : "mb-2 md:mb-3"}`}>
+                <span className={`mt-0 mr-2 font-bold text-black ${forceMobileLayout ? "text-lg" : "text-lg md:mr-3 md:text-xl"}`}>•</span>
+                <span className={`flex-1 text-gray-800 ${forceMobileLayout ? "text-[15px] leading-[22px]" : "text-[15px] leading-[22px] md:text-base md:leading-7 lg:text-lg"}`}>
                   {item.name}
                 </span>
               </div>
@@ -155,7 +166,7 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
         </div>
 
         {/* Show More/Less Button */}
-        {amenities.length > displayLimit && (
+        {validAmenities.length > displayLimit && (
           <button
             onClick={() => {
               setShowAll(!showAll);
@@ -163,15 +174,17 @@ export const AmenitiesSection: React.FC<AmenitiesSectionProps> = ({
                 trackEvent({ pageId, eventType: 'button_click', eventData: { action: 'show_more', section_type: 'amenities', section_id: sectionId } });
               }
             }}
-            className="flex items-center gap-1 md:gap-2 ml-auto hover:opacity-70 transition-opacity"
+            className={`ml-auto flex items-center gap-1 hover:opacity-70 transition-opacity ${
+              forceMobileLayout ? "mt-4" : "mt-4 md:mt-6 md:gap-2"
+            }`}
           >
-            <span className="text-base md:text-lg font-semibold text-black">
-              {showAll ? 'Show Less' : 'Show More'}
+            <span className={`font-bold text-black ${forceMobileLayout ? "text-base" : "text-base md:text-lg"}`}>
+              {showAll ? 'Read Less' : 'Read More'}
             </span>
             {showAll ? (
-              <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-black" />
+              <ChevronUp className={forceMobileLayout ? "h-4 w-4 text-black" : "h-4 w-4 text-black md:h-5 md:w-5"} />
             ) : (
-              <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-black" />
+              <ChevronDown className={forceMobileLayout ? "h-4 w-4 text-black" : "h-4 w-4 text-black md:h-5 md:w-5"} />
             )}
           </button>
         )}

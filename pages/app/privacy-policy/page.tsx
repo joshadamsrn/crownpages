@@ -1,20 +1,40 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import { CrownPagesPublicShell } from '@/components/crownpages-public-shell';
+import { getCurrentWhiteLabelTenant } from '@/lib/white-label-tenants';
 
-export const metadata: Metadata = {
-    title: 'Privacy Policy | CrownPages',
-    description: 'Learn how CrownPages collects, uses, and protects your personal information.',
-    openGraph: {
-        title: 'Privacy Policy | CrownPages',
-        description: 'Learn how CrownPages collects, uses, and protects your personal information.',
-        type: 'website',
-    },
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const tenant = await getCurrentWhiteLabelTenant();
+    const description = `Learn how ${tenant.publicName} collects, uses, and protects your personal information.`;
 
-export default function PrivacyPolicyPage() {
-    return (
-        <div className="min-h-screen bg-gray-50">
+    return {
+        title: `Privacy Policy | ${tenant.publicName}`,
+        description,
+        openGraph: {
+            title: `Privacy Policy | ${tenant.publicName}`,
+            description,
+            type: 'website',
+        },
+    };
+}
+
+export default async function PrivacyPolicyPage() {
+    const tenant = await getCurrentWhiteLabelTenant();
+    const serviceName = tenant.publicName;
+
+    const content = (
+        <div className="crownpages-legal-page min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-12">
                 <div className="bg-white rounded-lg shadow-lg p-8">
+                    {tenant.logoUrl && (
+                        <Image
+                            src={tenant.logoUrl}
+                            alt={`${serviceName} logo`}
+                            width={240}
+                            height={120}
+                            className="mb-8 h-20 w-auto object-contain"
+                        />
+                    )}
                     <h1 className="text-4xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
 
                     <div className="text-sm text-gray-600 mb-8">
@@ -25,9 +45,9 @@ export default function PrivacyPolicyPage() {
                         <section>
                             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
                             <p>
-                                Welcome to CrownPages (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). This Privacy Policy explains how we collect,
+                                Welcome to {serviceName} (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). This Privacy Policy explains how we collect,
                                 use, disclose, and safeguard your information when you visit our website and use our services.
-                                CrownPages is a platform that enables businesses and individuals to create and share digital
+                                {serviceName} is a platform that enables businesses and individuals to create and share digital
                                 business cards and pages.
                             </p>
                         </section>
@@ -209,7 +229,27 @@ export default function PrivacyPolicyPage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Changes to This Privacy Policy</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. SMS Messaging and Consent</h2>
+                            <p className="mb-4">
+                                {serviceName} may facilitate customer care SMS messages on behalf of businesses using our
+                                platform when a consumer voluntarily provides separate consent on an inquiry or tour
+                                request form.
+                            </p>
+                            <ul className="list-disc list-inside space-y-2 mb-4">
+                                <li>SMS consent is optional and is not required to use {serviceName}.</li>
+                                <li>Consent is collected through a separate unchecked checkbox shown directly on the form.</li>
+                                <li>Message frequency varies and message and data rates may apply.</li>
+                                <li>Consumers may opt out at any time by replying STOP and request help by replying HELP.</li>
+                            </ul>
+                            <p>
+                                We use the phone number and request details provided through these forms to deliver the
+                                specific follow-up messages the consumer has agreed to receive, such as inquiry
+                                confirmations and scheduling updates.
+                            </p>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Changes to This Privacy Policy</h2>
                             <p>
                                 We may update this Privacy Policy from time to time. We will notify you of any material
                                 changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot;
@@ -218,26 +258,26 @@ export default function PrivacyPolicyPage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Contact Us</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Contact Us</h2>
                             <p className="mb-4">
                                 If you have any questions about this Privacy Policy or our privacy practices, please contact us:
                             </p>
                             <div className="bg-gray-50 p-4 rounded-lg">
-                                <p><strong>Support:</strong> support@crownpages.com</p>
+                                <p><strong>Support:</strong> {tenant.supportEmail}</p>
                             </div>
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Specific Provisions for Different Jurisdictions</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Specific Provisions for Different Jurisdictions</h2>
 
-                            <h3 className="text-lg font-semibold mb-3">14.1 European Union (GDPR)</h3>
+                            <h3 className="text-lg font-semibold mb-3">15.1 European Union (GDPR)</h3>
                             <p className="mb-4">
                                 If you are located in the European Union, you have additional rights under the General
                                 Data Protection Regulation (GDPR), including the right to lodge a complaint with a
                                 supervisory authority.
                             </p>
 
-                            <h3 className="text-lg font-semibold mb-3">14.2 California (CCPA)</h3>
+                            <h3 className="text-lg font-semibold mb-3">15.2 California (CCPA)</h3>
                             <p>
                                 If you are a California resident, you have additional rights under the California Consumer
                                 Privacy Act (CCPA), including the right to request information about the sale of your
@@ -248,11 +288,21 @@ export default function PrivacyPolicyPage() {
 
                     <div className="mt-12 pt-8 border-t border-gray-200">
                         <p className="text-sm text-gray-600 text-center">
-                            By using CrownPages, you acknowledge that you have read and understood this Privacy Policy.
+                            By using {serviceName}, you acknowledge that you have read and understood this Privacy Policy.
                         </p>
                     </div>
                 </div>
             </div>
         </div>
     );
-} 
+
+    if (tenant.id !== 'crownpages') {
+        return content;
+    }
+
+    return (
+        <CrownPagesPublicShell>
+            {content}
+        </CrownPagesPublicShell>
+    );
+}

@@ -1,20 +1,40 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
+import Image from 'next/image';
+import { CrownPagesPublicShell } from '@/components/crownpages-public-shell';
+import { getCurrentWhiteLabelTenant } from '@/lib/white-label-tenants';
 
-export const metadata: Metadata = {
-    title: 'Terms of Service | CrownPages',
-    description: 'Read the Terms of Service for CrownPages platform.',
-    openGraph: {
-        title: 'Terms of Service | CrownPages',
-        description: 'Read the Terms of Service for CrownPages platform.',
-        type: 'website',
-    },
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const tenant = await getCurrentWhiteLabelTenant();
+    const description = `Read the Terms of Service for ${tenant.publicName}.`;
 
-export default function TermsOfServicePage() {
-    return (
-        <div className="min-h-screen bg-gray-50">
+    return {
+        title: `Terms of Service | ${tenant.publicName}`,
+        description,
+        openGraph: {
+            title: `Terms of Service | ${tenant.publicName}`,
+            description,
+            type: 'website',
+        },
+    };
+}
+
+export default async function TermsOfServicePage() {
+    const tenant = await getCurrentWhiteLabelTenant();
+    const serviceName = tenant.publicName;
+
+    const content = (
+        <div className="crownpages-legal-page min-h-screen bg-gray-50">
             <div className="max-w-4xl mx-auto px-4 py-12">
                 <div className="bg-white rounded-lg shadow-lg p-8">
+                    {tenant.logoUrl && (
+                        <Image
+                            src={tenant.logoUrl}
+                            alt={`${serviceName} logo`}
+                            width={240}
+                            height={120}
+                            className="mb-8 h-20 w-auto object-contain"
+                        />
+                    )}
                     <h1 className="text-4xl font-bold text-gray-900 mb-8">Terms of Service</h1>
 
                     <div className="text-sm text-gray-600 mb-8">
@@ -25,7 +45,7 @@ export default function TermsOfServicePage() {
                         <section>
                             <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Acceptance of Terms</h2>
                             <p>
-                                By accessing and using CrownPages (&quot;the Service&quot;), you accept and agree to be bound by the
+                                By accessing and using {serviceName} (&quot;the Service&quot;), you accept and agree to be bound by the
                                 terms and provision of this agreement. If you do not agree to abide by the above, please
                                 do not use this service.
                             </p>
@@ -34,7 +54,7 @@ export default function TermsOfServicePage() {
                         <section>
                             <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Service</h2>
                             <p className="mb-4">
-                                CrownPages is a platform that allows users to create and share digital business cards and
+                                {serviceName} is a platform that allows users to create and share digital business cards and
                                 pages. Our services include:
                             </p>
                             <ul className="list-disc list-inside space-y-2">
@@ -96,7 +116,7 @@ export default function TermsOfServicePage() {
                             <h3 className="text-lg font-semibold mb-3">5.2 Our Content</h3>
                             <p className="mb-4">
                                 The Service and its original content, features, and functionality are and will remain
-                                the exclusive property of CrownPages and its licensors. The Service is protected by
+                                the exclusive property of {serviceName} and its licensors. The Service is protected by
                                 copyright, trademark, and other laws.
                             </p>
 
@@ -118,8 +138,48 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Payments and Subscriptions</h2>
-                            <h3 className="text-lg font-semibold mb-3">7.1 Paid Services</h3>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. SMS Messaging Consent</h2>
+                            <p className="mb-4">
+                                {serviceName} may facilitate SMS messages on behalf of businesses using our platform when a
+                                consumer submits a Connect or Visit request form and explicitly agrees to receive text
+                                messages at the phone number provided.
+                            </p>
+
+                            <h3 className="text-lg font-semibold mb-3">7.1 Consent to Receive Messages</h3>
+                            <p className="mb-4">
+                                By checking the separate SMS consent box on a {serviceName} form, you agree to receive
+                                customer care SMS messages related to your request, including confirmations and
+                                scheduling updates. Consent is not a condition of purchase or use of the service, and
+                                consumers may submit their request without opting in to SMS.
+                            </p>
+
+                            <h3 className="text-lg font-semibold mb-3">7.2 Message Frequency and Charges</h3>
+                            <p className="mb-4">
+                                Message frequency varies based on your interaction with the business you contacted.
+                                Message and data rates may apply according to your mobile carrier plan.
+                            </p>
+
+                            <h3 className="text-lg font-semibold mb-3">7.3 Opt-Out Instructions</h3>
+                            <p className="mb-4">
+                                You may opt out of SMS messages at any time by replying STOP to any message you receive.
+                                After you opt out, you will no longer receive SMS messages for that request unless you
+                                opt back in.
+                            </p>
+
+                            <h3 className="text-lg font-semibold mb-3">7.4 Help Instructions</h3>
+                            <p className="mb-4">
+                                For help, reply HELP to any message you receive or contact us at {tenant.supportEmail}.
+                            </p>
+
+                            <h3 className="text-lg font-semibold mb-3">7.5 Carrier Disclaimer</h3>
+                            <p>
+                                Carriers are not liable for delayed or undelivered messages.
+                            </p>
+                        </section>
+
+                        <section>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Payments and Subscriptions</h2>
+                            <h3 className="text-lg font-semibold mb-3">8.1 Paid Services</h3>
                             <p className="mb-4">
                                 Some features of the Service may require payment. By purchasing a paid service, you agree to:
                             </p>
@@ -129,7 +189,7 @@ export default function TermsOfServicePage() {
                                 <li>Authorize recurring charges for subscription services</li>
                             </ul>
 
-                            <h3 className="text-lg font-semibold mb-3">7.2 Refunds</h3>
+                            <h3 className="text-lg font-semibold mb-3">8.2 Refunds</h3>
                             <p>
                                 Refunds may be available for certain circumstances as outlined in our refund policy.
                                 Contact our support team for assistance with refund requests.
@@ -137,7 +197,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Service Availability</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Service Availability</h2>
                             <p>
                                 We strive to maintain high availability but do not guarantee uninterrupted access to the
                                 Service. We may modify, suspend, or discontinue any part of the Service at any time with
@@ -146,7 +206,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Disclaimers</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Disclaimers</h2>
                             <p className="mb-4">
                                 THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF ANY KIND.
                                 WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING:
@@ -159,7 +219,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Limitation of Liability</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Limitation of Liability</h2>
                             <p>
                                 TO THE MAXIMUM EXTENT PERMITTED BY LAW, CROWNPAGES SHALL NOT BE LIABLE FOR ANY INDIRECT,
                                 INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO
@@ -168,16 +228,16 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Indemnification</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Indemnification</h2>
                             <p>
-                                You agree to defend, indemnify, and hold harmless CrownPages and its affiliates from
+                                You agree to defend, indemnify, and hold harmless {serviceName} and its affiliates from
                                 any claims, damages, costs, and expenses (including attorneys&apos; fees) arising from your
                                 use of the Service or violation of these Terms.
                             </p>
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">12. Termination</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Termination</h2>
                             <p className="mb-4">
                                 We may terminate or suspend your account and access to the Service immediately, without
                                 prior notice, for any reason, including if you breach these Terms.
@@ -189,7 +249,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">13. Governing Law</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Governing Law</h2>
                             <p>
                                 These Terms shall be governed by and construed in accordance with the laws of [Your Jurisdiction],
                                 without regard to its conflict of law provisions. Any disputes shall be resolved in the
@@ -198,7 +258,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">14. Changes to Terms</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Changes to Terms</h2>
                             <p>
                                 We reserve the right to modify these Terms at any time. We will notify users of material
                                 changes by posting the updated Terms on our website. Your continued use of the Service
@@ -207,7 +267,7 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">15. Severability</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">16. Severability</h2>
                             <p>
                                 If any provision of these Terms is found to be unenforceable, the remaining provisions
                                 will remain in full force and effect.
@@ -215,23 +275,33 @@ export default function TermsOfServicePage() {
                         </section>
 
                         <section>
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">16. Contact Information</h2>
+                            <h2 className="text-2xl font-semibold text-gray-900 mb-4">17. Contact Information</h2>
                             <p className="mb-4">
                                 If you have any questions about these Terms of Service, please contact us:
                             </p>
                             <div className="bg-gray-50 p-4 rounded-lg">
-                                <p><strong>Support:</strong> support@crownpages.com</p>
+                                <p><strong>Support:</strong> {tenant.supportEmail}</p>
                             </div>
                         </section>
                     </div>
 
                     <div className="mt-12 pt-8 border-t border-gray-200">
                         <p className="text-sm text-gray-600 text-center">
-                            By using CrownPages, you acknowledge that you have read and understood these Terms of Service.
+                            By using {serviceName}, you acknowledge that you have read and understood these Terms of Service.
                         </p>
                     </div>
                 </div>
             </div>
         </div>
     );
-} 
+
+    if (tenant.id !== 'crownpages') {
+        return content;
+    }
+
+    return (
+        <CrownPagesPublicShell>
+            {content}
+        </CrownPagesPublicShell>
+    );
+}
