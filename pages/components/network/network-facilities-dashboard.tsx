@@ -56,6 +56,15 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+const facilityDateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: "UTC",
+});
+
+function formatFacilityDate(value: string) {
+  return facilityDateFormatter.format(new Date(value));
+}
+
 function agreementBadgeClass(status: NetworkFacilityAgreementStatus) {
   if (status === "active") return "border-emerald-200 bg-emerald-50 text-emerald-800";
   if (status === "pending") return "border-amber-200 bg-amber-50 text-amber-800";
@@ -254,7 +263,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
               <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2"><h2 className="text-2xl font-black text-slate-950">{draft.name}</h2>{draftIsReferralEligible ? <Badge className="border-emerald-200 bg-emerald-50 text-emerald-800" variant="outline">Referral ready</Badge> : <Badge variant="outline">Not deliverable</Badge>}</div>
-                  <p className="mt-1 text-sm text-slate-500">PHN ID: {draft.sourceFacilityId || "Not supplied"} · Updated {new Date(draft.updatedAt).toLocaleDateString()}</p>
+                  <p className="mt-1 text-sm text-slate-500">PHN ID: {draft.sourceFacilityId || "Not supplied"} · Updated {formatFacilityDate(draft.updatedAt)}</p>
                 </div>
                 <Button asChild size="sm" variant="outline"><Link href={`/network/facilities/${draft.slug}`} target="_blank">View profile <ExternalLink /></Link></Button>
               </div>
