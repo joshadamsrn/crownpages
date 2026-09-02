@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import type { NetworkAdminFeeAction } from "@/lib/network/admin-fee-types";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -20,16 +21,6 @@ const NOTE_REQUIRED = new Set<NetworkAdminFeeAction>([
   "waive",
 ]);
 
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -37,7 +28,7 @@ export async function POST(
   if (!isNetworkReferralsEnabled()) {
     return NextResponse.json({ error: "Fee operations are still in preview mode." }, { status: 503 });
   }
-  if (!hasValidOrigin(request)) {
+  if (!hasValidRequestOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
   if (Number(request.headers.get("content-length") || 0) > 15_000) {

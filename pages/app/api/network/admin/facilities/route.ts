@@ -2,19 +2,10 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { getNetworkAdminFacilities } from "@/lib/network/admin-facilities";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
 
 async function authorize() {
   const supabase = await createClient();
@@ -53,7 +44,7 @@ export async function POST(request: NextRequest) {
   if (!isNetworkReferralsEnabled()) {
     return NextResponse.json({ error: "Facility operations are still in preview mode." }, { status: 503 });
   }
-  if (!hasValidOrigin(request)) {
+  if (!hasValidRequestOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
   const authorization = await authorize();

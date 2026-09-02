@@ -4,6 +4,7 @@ import {
   isValidNetworkProviderAccessToken,
 } from "@/lib/network/provider-referral-access";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_REQUEST_BYTES = 10_000;
@@ -15,16 +16,6 @@ const ACTIONS = new Set([
   "report_lost",
 ]);
 
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
@@ -32,7 +23,7 @@ export async function POST(
   if (!isNetworkReferralsEnabled()) {
     return NextResponse.json({ error: "Provider responses are still in preview mode." }, { status: 503 });
   }
-  if (!hasValidOrigin(request)) {
+  if (!hasValidRequestOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
   if (Number(request.headers.get("content-length") || 0) > MAX_REQUEST_BYTES) {

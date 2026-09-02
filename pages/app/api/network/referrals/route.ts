@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import {
   buildNetworkSharingDisclosure,
   NETWORK_COMMUNICATION_DISCLOSURE,
@@ -21,15 +22,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      if (new URL(origin).host !== request.nextUrl.host) {
-        return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
-      }
-    } catch {
-      return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
-    }
+  if (!hasValidRequestOrigin(request)) {
+    return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
 
   const contentLength = Number(request.headers.get("content-length") || 0);

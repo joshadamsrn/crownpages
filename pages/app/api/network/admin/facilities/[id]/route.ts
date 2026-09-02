@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { NetworkAdminFacilitySettings } from "@/lib/network/admin-facility-types";
 import { getNetworkAdminFacilities } from "@/lib/network/admin-facilities";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import { NETWORK_CARE_TYPES, type NetworkCareType } from "@/lib/network/types";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -16,16 +17,6 @@ const AGREEMENT_STATUSES = new Set(["not_contacted", "pending", "active", "inact
 const FEE_TYPES = new Set(["flat", "percentage", "custom"]);
 const PRICE_PERIODS = new Set(["hour", "day", "week", "month"]);
 const CARE_TYPES = new Set<string>(NETWORK_CARE_TYPES);
-
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
 
 function nullableString(value: unknown, maxLength = 1000) {
   if (value === null || value === undefined || value === "") return null;
@@ -203,7 +194,7 @@ export async function PATCH(
   if (!isNetworkReferralsEnabled()) {
     return NextResponse.json({ error: "Facility operations are still in preview mode." }, { status: 503 });
   }
-  if (!hasValidOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
+  if (!hasValidRequestOrigin(request)) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   if (Number(request.headers.get("content-length") || 0) > 25_000) {
     return NextResponse.json({ error: "Request is too large." }, { status: 413 });
   }

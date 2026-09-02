@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { NetworkAdminReferralAction } from "@/lib/network/admin-types";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
+import { hasValidRequestOrigin } from "@/lib/network/request-origin";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
 import { createNetworkProviderAccessToken } from "@/lib/network/provider-referral-access";
 import {
@@ -41,16 +42,6 @@ const NOTE_REQUIRED_ACTIONS = new Set<NetworkAdminReferralAction>([
   "close",
 ]);
 
-function hasValidOrigin(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === request.nextUrl.host;
-  } catch {
-    return false;
-  }
-}
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -58,7 +49,7 @@ export async function POST(
   if (!isNetworkReferralsEnabled()) {
     return NextResponse.json({ error: "Referral operations are still in preview mode." }, { status: 503 });
   }
-  if (!hasValidOrigin(request)) {
+  if (!hasValidRequestOrigin(request)) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   }
   if (Number(request.headers.get("content-length") || 0) > MAX_REQUEST_BYTES) {
