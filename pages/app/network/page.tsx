@@ -164,23 +164,19 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
       ) : null}
 
       <section className={styles.howItWorks} id="how-it-works" aria-labelledby="how-title">
-        <h2 id="how-title">A clearer path to the next right step.</h2>
-        <div className={styles.steps}>
-          <div className={styles.step}>
-            <span className={styles.stepNumber}>1</span>
-            <h3>Explore freely</h3>
-            <p>Search every listed provider without creating an account or paying a fee.</p>
-          </div>
-          <div className={styles.step}>
-            <span className={styles.stepNumber}>2</span>
-            <h3>Compare what matters</h3>
-            <p>Review care types, location, services, and community details in one consistent format.</p>
-          </div>
-          <div className={styles.step}>
-            <span className={styles.stepNumber}>3</span>
-            <h3>Connect confidently</h3>
-            <p>Ask for personalized help and choose exactly which providers may receive your request.</p>
-          </div>
+        <div>
+          <span className={styles.howEyebrow}>How it works</span>
+          <h2 id="how-title">Free for families seeking care.</h2>
+        </div>
+        <div className={styles.howItWorksCopy}>
+          <p>
+            Crown Network is free to use for people seeking care and their families. You will never pay Crown
+            Network to search providers, compare options, or request help.
+          </p>
+          <p>
+            Participating facilities fund the service by paying Crown Network a referral fee when a family we
+            connect chooses their care. These fees do not determine the order of organic search results.
+          </p>
         </div>
       </section>
     </main>

@@ -564,34 +564,26 @@
   letter-spacing: -0.04em;
 }
 
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-
-.stepNumber {
-  display: inline-grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border-radius: 50%;
-  background: #f2bd52;
-  color: #17362f;
+.howEyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: #f2bd52;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.step h3 {
-  margin: 15px 0 7px;
-  font-size: 15px;
+.howItWorksCopy {
+  display: grid;
+  gap: 16px;
 }
 
-.step p {
+.howItWorksCopy p {
   margin: 0;
   color: #bed0c9;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .footer {
@@ -1510,7 +1502,6 @@
   .primaryFilters,
   .advancedFilters,
   .grid,
-  .steps,
   .amenityGrid {
     grid-template-columns: 1fr;
   }

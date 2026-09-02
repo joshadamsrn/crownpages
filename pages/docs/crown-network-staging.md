@@ -64,6 +64,13 @@ The onboarding schema is added by
 `supabase/migrations/20260901020000_add_network_facility_onboarding.sql`.
 Staff changes are recorded in `network_facility_events`.
 
+## Family service model
+
+Crown Network is free for people seeking care and their families. Participating
+facilities may pay Crown Network a referral fee when a family connected through
+the service chooses their care. Compensation does not determine organic search
+order.
+
 ## Family directory filters
 
 The public directory at `/network` supports care type, state, proximity,
