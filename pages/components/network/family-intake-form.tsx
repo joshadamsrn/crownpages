@@ -29,6 +29,7 @@ export type IntakeFacilityOption = {
   name: string;
   city: string | null;
   state: string | null;
+  zipCode: string | null;
   careTypes: string[];
 };
 
@@ -132,26 +133,30 @@ function getBudgetValues(range: string) {
 
 export function FamilyIntakeForm({
   facilities,
+  initialFacilityContext,
   initialFacilityId,
   previewMode,
   referralSource,
 }: {
   facilities: IntakeFacilityOption[];
+  initialFacilityContext?: IntakeFacilityOption;
   initialFacilityId?: string;
   previewMode: boolean;
   referralSource?: "network_profile";
 }) {
+  const isProviderSpecificFlow = Boolean(initialFacilityContext);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<IntakeState>(() => {
-    const initialFacility = facilities.find((facility) => facility.id === initialFacilityId);
+    const initialFacility = initialFacilityContext || facilities.find((facility) => facility.id === initialFacilityId);
     return {
       ...EMPTY_STATE,
       desiredCity: initialFacility?.city || "",
       desiredState: initialFacility?.state || "",
+      desiredZipCode: initialFacility?.zipCode || "",
       careTypes: initialFacility?.careTypes.filter((careType) =>
         (CARE_TYPES as readonly string[]).includes(careType),
       ) || [],
-      facilityIds: initialFacility ? [initialFacility.id] : [],
+      facilityIds: initialFacilityId ? [initialFacilityId] : [],
     };
   });
   const [facilityQuery, setFacilityQuery] = useState("");
@@ -203,8 +208,10 @@ export function FamilyIntakeForm({
   const validateStep = (targetStep: number) => {
     if (targetStep === 0) {
       if (!form.relationship) return "Tell us who you are helping.";
-      if (!form.desiredCity.trim() && !form.desiredZipCode.trim()) return "Enter a city or ZIP code.";
-      if (form.careTypes.length === 0) return "Select at least one care type.";
+      if (!isProviderSpecificFlow) {
+        if (!form.desiredCity.trim() && !form.desiredZipCode.trim()) return "Enter a city or ZIP code.";
+        if (form.careTypes.length === 0) return "Select at least one care type.";
+      }
       if (!form.moveTimeframe) return "Select a move timeframe.";
     }
 
@@ -356,7 +363,11 @@ export function FamilyIntakeForm({
             <div className={styles.stepHeading}>
               <span>Step 1</span>
               <h2>Who are you helping?</h2>
-              <p>Start with the basics so we can narrow the directory to relevant options.</p>
+              <p>
+                {isProviderSpecificFlow
+                  ? "Tell us who you are helping and when care may be needed."
+                  : "Start with the basics so we can narrow the directory to relevant options."}
+              </p>
             </div>
 
             <div className={styles.formGridTwo}>
@@ -384,45 +395,49 @@ export function FamilyIntakeForm({
               </label>
             </div>
 
-            <fieldset className={styles.fieldset}>
-              <legend>What type of care are you considering?</legend>
-              <div className={styles.choiceGridThree}>
-                {CARE_TYPES.map((careType) => (
-                  <label className={form.careTypes.includes(careType) ? styles.choiceSelected : styles.choice} key={careType}>
-                    <input
-                      checked={form.careTypes.includes(careType)}
-                      onChange={() => update("careTypes", toggleValue(form.careTypes, careType))}
-                      type="checkbox"
-                    />
-                    <span>{careType}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            {!isProviderSpecificFlow ? (
+              <>
+                <fieldset className={styles.fieldset}>
+                  <legend>What type of care are you considering?</legend>
+                  <div className={styles.choiceGridThree}>
+                    {CARE_TYPES.map((careType) => (
+                      <label className={form.careTypes.includes(careType) ? styles.choiceSelected : styles.choice} key={careType}>
+                        <input
+                          checked={form.careTypes.includes(careType)}
+                          onChange={() => update("careTypes", toggleValue(form.careTypes, careType))}
+                          type="checkbox"
+                        />
+                        <span>{careType}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
 
-            <div className={styles.formGridLocation}>
-              <label className={styles.formLabel}>
-                Preferred city
-                <input value={form.desiredCity} onChange={(event) => update("desiredCity", event.target.value)} placeholder="Salt Lake City" />
-              </label>
-              <label className={styles.formLabel}>
-                State
-                <input value={form.desiredState} onChange={(event) => update("desiredState", event.target.value)} placeholder="Utah" />
-              </label>
-              <label className={styles.formLabel}>
-                ZIP code
-                <input value={form.desiredZipCode} onChange={(event) => update("desiredZipCode", event.target.value)} inputMode="numeric" placeholder="84101" />
-              </label>
-              <label className={styles.formLabel}>
-                Search radius
-                <select value={form.searchRadiusMiles} onChange={(event) => update("searchRadiusMiles", event.target.value)}>
-                  <option value="10">10 miles</option>
-                  <option value="25">25 miles</option>
-                  <option value="50">50 miles</option>
-                  <option value="100">100 miles</option>
-                </select>
-              </label>
-            </div>
+                <div className={styles.formGridLocation}>
+                  <label className={styles.formLabel}>
+                    Preferred city
+                    <input value={form.desiredCity} onChange={(event) => update("desiredCity", event.target.value)} placeholder="Salt Lake City" />
+                  </label>
+                  <label className={styles.formLabel}>
+                    State
+                    <input value={form.desiredState} onChange={(event) => update("desiredState", event.target.value)} placeholder="Utah" />
+                  </label>
+                  <label className={styles.formLabel}>
+                    ZIP code
+                    <input value={form.desiredZipCode} onChange={(event) => update("desiredZipCode", event.target.value)} inputMode="numeric" placeholder="84101" />
+                  </label>
+                  <label className={styles.formLabel}>
+                    Search radius
+                    <select value={form.searchRadiusMiles} onChange={(event) => update("searchRadiusMiles", event.target.value)}>
+                      <option value="10">10 miles</option>
+                      <option value="25">25 miles</option>
+                      <option value="50">50 miles</option>
+                      <option value="100">100 miles</option>
+                    </select>
+                  </label>
+                </div>
+              </>
+            ) : null}
           </div>
         ) : null}
 

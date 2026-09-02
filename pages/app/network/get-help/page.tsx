@@ -39,8 +39,21 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
       name: facility.name,
       city: facility.city,
       state: facility.state,
+      zipCode: facility.zipCode,
       careTypes: facility.careTypes,
     }));
+  const requestedFacility = allFacilities.find((facility) => facility.slug === requestedSlug);
+  const initialFacilityContext = requestedFacility
+    ? {
+        id: requestedFacility.id,
+        slug: requestedFacility.slug,
+        name: requestedFacility.name,
+        city: requestedFacility.city,
+        state: requestedFacility.state,
+        zipCode: requestedFacility.zipCode,
+        careTypes: requestedFacility.careTypes,
+      } satisfies IntakeFacilityOption
+    : undefined;
   const initialFacilityId = facilities.find((facility) => facility.slug === requestedSlug)?.id;
   const referralSource = requestedSource === "network-profile" && initialFacilityId
     ? "network_profile"
@@ -67,6 +80,7 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
     <main className={styles.intakeMain}>
       <FamilyIntakeForm
         facilities={facilities}
+        initialFacilityContext={initialFacilityContext}
         initialFacilityId={initialFacilityId}
         previewMode={previewMode}
         referralSource={referralSource}
