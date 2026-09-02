@@ -45,6 +45,22 @@ function getRequestedPageRoute(slug: string) {
   };
 }
 
+function getCanonicalPageUrl(businessSlug: string, pageSlug: string) {
+  const isProduction =
+    process.env.VERCEL_ENV === "production" || process.env.CONTEXT === "production";
+  let siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "") || "";
+
+  try {
+    if (!siteUrl || (isProduction && new URL(siteUrl).hostname === "localhost")) {
+      siteUrl = isProduction ? "https://crownpages.com" : "http://localhost:3000";
+    }
+  } catch {
+    siteUrl = isProduction ? "https://crownpages.com" : "http://localhost:3000";
+  }
+
+  return `${siteUrl}/${encodeURIComponent(businessSlug)}/${encodeURIComponent(pageSlug)}`;
+}
+
 function isReferralSafeAssetUrl(value: unknown) {
   if (typeof value !== "string" || !value.trim()) return true;
   if (!/^https?:/i.test(value)) return !/^(?:mailto|tel):/i.test(value);
@@ -219,7 +235,7 @@ export async function generateMetadata({
     },
     robots: referralSafeMode ? { index: false, follow: false } : undefined,
     alternates: referralSafeMode
-      ? { canonical: `/${business_slug}/${pageSlug}` }
+      ? { canonical: getCanonicalPageUrl(business_slug, pageSlug) }
       : undefined,
   };
 }
