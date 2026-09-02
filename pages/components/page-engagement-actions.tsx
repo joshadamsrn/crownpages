@@ -264,7 +264,7 @@ function ReferralActionLink({ href }: { href: string }) {
         borderColor: '#0f4fb3',
         background: 'linear-gradient(180deg, #ffffff 0%, #edf4ff 100%)',
       }}
-      className="flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full border-2 px-4 py-3 text-left shadow-[0_1px_6px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-[0_6px_14px_rgba(15,23,42,0.10)] md:w-auto md:min-w-[210px]"
+      className="flex min-h-[60px] w-full max-w-sm items-center justify-center gap-3 rounded-2xl border-2 px-6 py-3.5 text-center shadow-[0_4px_14px_rgba(15,79,179,0.10)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(15,79,179,0.16)]"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center text-[#0f4fb3]">
         <Handshake className="block" />
@@ -910,10 +910,12 @@ export function PageEngagementActions({
 
   return (
     <>
-      <section className="max-w-5xl px-4 pt-1 pb-4">
+      <section className={referralSafeHref ? "w-full py-5" : "max-w-5xl px-4 pt-1 pb-4"}>
         <div
           className={
-            forceMobileLayout
+            referralSafeHref
+              ? "flex w-full justify-center"
+              : forceMobileLayout
               ? "grid grid-cols-2 gap-3"
               : "grid grid-cols-2 gap-3 md:flex md:flex-wrap md:gap-4"
           }
