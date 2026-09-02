@@ -76,7 +76,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
             Free care directory
           </div>
           <h1 className={styles.title} id="network-title">
-            Find care that fits your family.
+            Find Care
           </h1>
         </div>
         <div>
