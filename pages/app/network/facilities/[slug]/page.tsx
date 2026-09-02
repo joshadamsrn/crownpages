@@ -53,9 +53,9 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
 
   return (
     <main className={styles.detailMain}>
-      <Link className={styles.backLink} href="/network#results">
+      <Link className={styles.backLink} href="/network#search">
         <ArrowLeft size={16} aria-hidden="true" />
-        Back to care options
+        Back to care search
       </Link>
 
       <section className={styles.detailHero}>

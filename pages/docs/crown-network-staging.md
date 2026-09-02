@@ -72,6 +72,10 @@ with a state and then choose a 5, 10, 25, 50, or 100 mile radius. Results use
 stored facility coordinates when present, fall back to the facility ZIP
 centroid, and sort nearest-first when distance is active.
 
+The directory does not render provider cards before a family supplies search
+criteria. Clearing the filters returns to the search form instead of exposing
+an unfiltered network listing.
+
 City inputs first resolve against the ZIP dataset and the locations of active
 Crown Network facilities. This facility-backed fallback recognizes cities such
 as Murray, Utah even when the ZIP dataset uses a different USPS preferred city.

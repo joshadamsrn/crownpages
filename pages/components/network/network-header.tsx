@@ -17,7 +17,7 @@ export function NetworkHeader() {
         </Link>
 
         <nav className={styles.nav} aria-label="Crown Network navigation">
-          <Link className={styles.navLink} href="/network#results">
+          <Link className={styles.navLink} href="/network#search">
             Find care
           </Link>
           <Link className={styles.navLink} href="/network#how-it-works">

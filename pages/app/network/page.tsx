@@ -62,8 +62,12 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
     getNetworkInsuranceOptions(),
     getNetworkLocationOptions(),
   ]);
-  const hasFilters = Boolean(
-    query || careType || state || radiusMiles || priceMax !== undefined || insurance,
+  const hasSearchCriteria = Boolean(
+    query.trim() ||
+      careType.trim() ||
+      state.trim() ||
+      priceMax !== undefined ||
+      insurance.trim(),
   );
   const priceSummary = priceMax !== undefined ? `up to ${formatCurrency(priceMax)}` : null;
 
@@ -91,7 +95,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
         </div>
       </section>
 
-      <section className={styles.searchPanel} aria-label="Search care providers">
+      <section className={styles.searchPanel} id="search" aria-label="Search care providers">
         <NetworkSearchForm
           careType={careType}
           insurance={insurance}
@@ -115,49 +119,49 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
         ) : null}
       </section>
 
-      <section id="results" aria-labelledby="results-title">
-        <div className={styles.resultHeader}>
-          <div>
-            <h2 className={styles.resultTitle} id="results-title">
-              {hasFilters ? "Matching care options" : "Explore care options"}
-            </h2>
-            <p className={styles.resultCopy}>
-              {total === 1 ? "1 listing" : `${total} listings`}
-              {total > facilities.length ? ` · showing the first ${facilities.length}` : ""}
-            </p>
-            {location.status === "resolved" || location.status === "exact" || priceSummary || insurance ? (
-              <div className={styles.appliedFilters} aria-label="Applied search filters">
-                {location.status === "resolved" ? (
-                  <span>Within {radiusMiles} miles of {location.label}</span>
-                ) : location.status === "exact" ? (
-                  <span>In {location.label}</span>
-                ) : null}
-                {priceSummary ? <span>Published starting price {priceSummary}; unknown prices also shown</span> : null}
-                {insurance ? <span>Accepts {insurance}</span> : null}
-              </div>
-            ) : null}
-          </div>
-          {hasFilters ? (
-            <Link className={styles.clearLink} href="/network#results">
+      {hasSearchCriteria ? (
+        <section id="results" aria-labelledby="results-title">
+          <div className={styles.resultHeader}>
+            <div>
+              <h2 className={styles.resultTitle} id="results-title">
+                Matching care options
+              </h2>
+              <p className={styles.resultCopy}>
+                {total === 1 ? "1 listing" : `${total} listings`}
+                {total > facilities.length ? ` · showing the first ${facilities.length}` : ""}
+              </p>
+              {location.status === "resolved" || location.status === "exact" || priceSummary || insurance ? (
+                <div className={styles.appliedFilters} aria-label="Applied search filters">
+                  {location.status === "resolved" ? (
+                    <span>Within {radiusMiles} miles of {location.label}</span>
+                  ) : location.status === "exact" ? (
+                    <span>In {location.label}</span>
+                  ) : null}
+                  {priceSummary ? <span>Published starting price {priceSummary}; unknown prices also shown</span> : null}
+                  {insurance ? <span>Accepts {insurance}</span> : null}
+                </div>
+              ) : null}
+            </div>
+            <Link className={styles.clearLink} href="/network#search">
               Clear filters
             </Link>
-          ) : null}
-        </div>
+          </div>
 
-        <div className={styles.grid}>
-          {facilities.length > 0 ? (
-            facilities.map((facility) => <FacilityCard facility={facility} key={facility.id} />)
-          ) : (
-            <div className={styles.empty}>
-              <h2>No exact matches yet</h2>
-              <p>Try a nearby city, a broader care type, or clear your current filters.</p>
-              <Link className={styles.clearLink} href="/network#results">
-                View all providers
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
+          <div className={styles.grid}>
+            {facilities.length > 0 ? (
+              facilities.map((facility) => <FacilityCard facility={facility} key={facility.id} />)
+            ) : (
+              <div className={styles.empty}>
+                <h2>No exact matches yet</h2>
+                <p>Try a nearby city, a broader care type, or adjust your current filters.</p>
+                <Link className={styles.clearLink} href="/network#search">
+                  Start a new search
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       <section className={styles.howItWorks} id="how-it-works" aria-labelledby="how-title">
         <h2 id="how-title">A clearer path to the next right step.</h2>

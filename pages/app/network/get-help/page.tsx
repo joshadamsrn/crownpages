@@ -50,11 +50,11 @@ export default async function GetHelpPage({ searchParams }: { searchParams: Sear
         <section className={styles.intakeSuccess}>
           <h1>Personalized referrals are opening soon.</h1>
           <p>
-            You can browse every Crown Network community today. Direct referral requests will open as participating
+            You can search Crown Network providers today. Direct referral requests will open as participating
             providers complete their agreements and availability setup.
           </p>
-          <Link className={styles.primaryAction} href="/network#results">
-            Browse the care directory
+          <Link className={styles.primaryAction} href="/network#search">
+            Search the care directory
           </Link>
         </section>
       </main>
