@@ -128,7 +128,7 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
               provider, or open its complete Crown Pages profile.
             </p>
             <Link className={styles.primaryAction} href={`/network/get-help?facility=${encodeURIComponent(facility.slug)}`}>
-              Get personalized help
+              Connect for Free
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <Link className={styles.secondaryAction} href={legacyProfilePath}>
