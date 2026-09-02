@@ -40,14 +40,20 @@
 }
 
 .brandMark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 13px;
-  background: #17362f;
-  color: #f2bd52;
+  display: block;
+  width: 42px;
+  height: 42px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #050505;
   box-shadow: 0 8px 24px rgba(23, 54, 47, 0.2);
+}
+
+.brandLogo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .brandName {

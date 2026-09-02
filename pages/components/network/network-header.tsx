@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Crown } from "lucide-react";
 import styles from "@/app/network/network.module.css";
 
 export function NetworkHeader() {
@@ -8,7 +8,15 @@ export function NetworkHeader() {
       <div className={styles.headerInner}>
         <Link className={styles.brand} href="/network" aria-label="Crown Network home">
           <span className={styles.brandMark}>
-            <Crown size={20} strokeWidth={2.2} />
+            <Image
+              alt=""
+              aria-hidden="true"
+              className={styles.brandLogo}
+              height={42}
+              priority
+              src="/crown-pages-release-icon.png"
+              width={42}
+            />
           </span>
           <span>
             <span className={styles.brandName}>Crown Network</span>
