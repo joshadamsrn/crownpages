@@ -319,7 +319,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                         value={draft.acceptedInsurances.join("\n")}
                       />
                     </label>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">Enter one plan per line. These plans power the family-facing insurance filter for Skilled Nursing and Home Health searches.</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">Enter one plan per line. These plans power the family-facing insurance filter for Skilled Nursing, Home Health, and Hospice searches.</p>
                     <p className="mt-3 text-xs leading-5 text-slate-500">These values power family-facing distance and price filters. They are separate from referral fee terms.</p>
                   </div>
                 </div>

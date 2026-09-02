@@ -10,7 +10,7 @@ export const NETWORK_CARE_TYPES = [
   "Transportation",
 ] as const;
 
-export const NETWORK_INSURANCE_CARE_TYPES = ["Skilled Nursing", "Home Health"] as const;
+export const NETWORK_INSURANCE_CARE_TYPES = ["Skilled Nursing", "Home Health", "Hospice"] as const;
 
 export type NetworkCareType = (typeof NETWORK_CARE_TYPES)[number];
 

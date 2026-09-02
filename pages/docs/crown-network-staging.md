@@ -87,7 +87,7 @@ after matching priced providers so families do not lose potentially suitable
 options. Staff can maintain coordinates, consumer price ranges, and billing periods from
 `/protected/network-facilities`; referral compensation remains separate.
 
-Skilled Nursing and Home Health searches replace the monthly-budget control
+Skilled Nursing, Home Health, and Hospice searches replace the monthly-budget control
 with an accepted-insurance field. Families can enter a plan such as Medicare,
 Medicaid, Aetna, or Select Health. Matching is case-insensitive against the
 structured `network_facilities.accepted_insurances` list. Insurance
