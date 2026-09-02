@@ -322,6 +322,13 @@ mux-player media-controller {
   color: #eda900 !important;
 }
 
+/* Keep sidebar navigation readable when its light-theme hover utilities fire. */
+.crownpages-dashboard-shell nav a:hover {
+  background: rgba(237, 169, 0, 0.16) !important;
+  color: #fafafa !important;
+  box-shadow: inset 0 0 0 1px rgba(237, 169, 0, 0.58);
+}
+
 .crownpages-dashboard-shell > div > main h1 {
   color: #fafafa !important;
   font-family: Impact, "Arial Narrow", sans-serif;
