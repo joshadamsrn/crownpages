@@ -446,6 +446,15 @@ mux-player media-controller {
   border-color: rgba(237, 169, 0, 0.32);
 }
 
+/* Dashboard list rows use light-theme hover utility classes. Keep their
+   hover treatment dark and readable inside CrownPages' always-dark shell. */
+.crownpages-dashboard-shell [class~="hover:bg-white"]:hover,
+.crownpages-dashboard-shell [class~="hover:bg-white/80"]:hover {
+  border-color: rgba(237, 169, 0, 0.58) !important;
+  background-color: rgba(237, 169, 0, 0.16) !important;
+  color: #fafafa !important;
+}
+
 .crownpages-dashboard-shell button[class*="bg-primary"],
 .crownpages-dashboard-shell a[class*="bg-primary"] {
   background-color: #eda900 !important;
