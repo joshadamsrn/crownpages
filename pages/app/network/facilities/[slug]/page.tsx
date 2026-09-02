@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Crown, ExternalLink, MapPin, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Crown, ExternalLink, MapPin } from "lucide-react";
 import { getNetworkFacility } from "@/lib/network/facilities";
 import styles from "../../network.module.css";
 
@@ -122,21 +122,15 @@ export default async function NetworkFacilityPage({ params }: FacilityPageProps)
 
         <aside>
           <div className={styles.contactCard}>
-            <h2>Connect with this provider</h2>
+            <h2>Connect through Crown Network</h2>
             <p>
-              Ask Crown Network for personalized help, contact the provider directly, or open its complete Crown
-              Pages profile.
+              Ask Crown Network for personalized help with availability, next steps, and connecting with this
+              provider, or open its complete Crown Pages profile.
             </p>
             <Link className={styles.primaryAction} href={`/network/get-help?facility=${encodeURIComponent(facility.slug)}`}>
               Get personalized help
               <ArrowRight size={17} aria-hidden="true" />
             </Link>
-            {facility.phone ? (
-              <a className={styles.secondaryAction} href={`tel:${facility.phone.replace(/[^+\d]/g, "")}`}>
-                <Phone size={17} aria-hidden="true" />
-                Call {facility.phone}
-              </a>
-            ) : null}
             <Link className={styles.secondaryAction} href={legacyProfilePath}>
               View full profile
               <ExternalLink size={16} aria-hidden="true" />
