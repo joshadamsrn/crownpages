@@ -7,6 +7,7 @@ import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
 import {
   distanceInMiles,
+  matchesResolvedNetworkLocation,
   resolveFacilityCoordinates,
   resolveNetworkSearchLocation,
 } from "@/lib/network/location";
@@ -160,6 +161,13 @@ function mapPageToFacility(
   const importSource = asObject(asObject(page.content)?.importSource);
   const imagePath = page.og_image_url || asString(hero?.backgroundImage);
   const logoPath = asString(hero?.logoUrl);
+  const declaredCareTypes = inferCareTypes(page.description, null, []);
+  const importedCareTypes = getCareTypes(networkFacility?.care_types);
+  const careTypes = declaredCareTypes.length
+    ? declaredCareTypes
+    : importedCareTypes.length
+      ? importedCareTypes
+      : inferCareTypes(page.description, about, amenities);
 
   return {
     id: page.id,
@@ -179,10 +187,7 @@ function mapPageToFacility(
     phone: business.phone,
     imageUrl: getNetworkImageUrl(imagePath),
     logoUrl: getNetworkImageUrl(logoPath),
-    careTypes:
-      networkFacility?.care_types?.length
-        ? getCareTypes(networkFacility.care_types)
-        : inferCareTypes(page.description, about, amenities),
+    careTypes,
     amenities: networkFacility?.amenities?.length ? networkFacility.amenities : amenities,
     latitude: asNumber(networkFacility?.latitude),
     longitude: asNumber(networkFacility?.longitude),
@@ -307,17 +312,19 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
       : null;
   const priceMax =
     typeof filters.priceMax === "number" && filters.priceMax >= 0 ? filters.priceMax : null;
-  const searchLocation =
-    radiusMiles && queryText
-      ? resolveNetworkSearchLocation(queryText, filters.state?.trim() || "", facilities)
-      : null;
+  const resolvedQueryLocation = queryText
+    ? resolveNetworkSearchLocation(queryText, filters.state?.trim() || "", facilities)
+    : null;
+  const searchLocation = radiusMiles ? resolvedQueryLocation : null;
   const locationStatus = radiusMiles
     ? !queryText
       ? "missing"
-      : searchLocation
+      : resolvedQueryLocation
         ? "resolved"
         : "unresolved"
-    : "not_requested";
+    : resolvedQueryLocation
+      ? "exact"
+      : "not_requested";
 
   const matches = facilities
     .map((facility) => {
@@ -339,13 +346,21 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
         if (facility.distanceMiles === null || facility.distanceMiles > radiusMiles) return false;
       }
 
+      if (
+        !radiusMiles &&
+        resolvedQueryLocation &&
+        !matchesResolvedNetworkLocation(facility, resolvedQueryLocation)
+      ) {
+        return false;
+      }
+
       if (priceMax !== null) {
         const facilityLow = facility.priceLow ?? facility.priceHigh;
         if (facilityLow === null) return false;
         if (priceMax !== null && facilityLow > priceMax) return false;
       }
 
-      if (!query || searchLocation) return true;
+      if (!query || resolvedQueryLocation) return true;
 
       const searchable = [
         facility.name,
@@ -379,7 +394,7 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
     total: matches.length,
     location: {
       status: locationStatus,
-      label: searchLocation?.label ?? null,
+      label: resolvedQueryLocation?.label ?? null,
     },
   };
 }

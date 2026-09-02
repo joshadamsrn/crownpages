@@ -185,10 +185,12 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
               {total === 1 ? "1 listing" : `${total} listings`}
               {total > facilities.length ? ` · showing the first ${facilities.length}` : ""}
             </p>
-            {location.status === "resolved" || priceSummary ? (
+            {location.status === "resolved" || location.status === "exact" || priceSummary ? (
               <div className={styles.appliedFilters} aria-label="Applied search filters">
                 {location.status === "resolved" ? (
                   <span>Within {radiusMiles} miles of {location.label}</span>
+                ) : location.status === "exact" ? (
+                  <span>In {location.label}</span>
                 ) : null}
                 {priceSummary ? <span>Starting price {priceSummary}</span> : null}
               </div>

@@ -17,6 +17,10 @@ type FacilityLocation = {
 
 export type ResolvedNetworkLocation = Coordinates & {
   label: string;
+  kind: "city" | "zip";
+  city: string;
+  stateCode: string;
+  zipCode: string | null;
 };
 
 const states = zipcodesUs.getStates();
@@ -51,7 +55,14 @@ function resolveCity(city: string, state: string): ResolvedNetworkLocation | nul
   const matches = zipcodesUs.findByCity(city.trim(), stateCode);
   const coordinates = averageCoordinates(matches);
   if (!coordinates) return null;
-  return { ...coordinates, label: `${city.trim()}, ${stateCode}` };
+  return {
+    ...coordinates,
+    label: `${city.trim()}, ${stateCode}`,
+    kind: "city",
+    city: city.trim(),
+    stateCode,
+    zipCode: null,
+  };
 }
 
 export function resolveNetworkSearchLocation(
@@ -68,6 +79,10 @@ export function resolveNetworkSearchLocation(
       latitude: result.latitude,
       longitude: result.longitude,
       label: `${zipMatch[1]} (${result.city}, ${result.stateCode})`,
+      kind: "zip",
+      city: result.city,
+      stateCode: result.stateCode,
+      zipCode: zipMatch[1],
     };
   }
 
@@ -86,6 +101,20 @@ export function resolveNetworkSearchLocation(
   }
 
   return state ? resolveCity(cityPart, state) : null;
+}
+
+export function matchesResolvedNetworkLocation(
+  facility: FacilityLocation,
+  location: ResolvedNetworkLocation,
+) {
+  if (location.kind === "zip") {
+    return facility.zipCode?.match(/[0-9]{5}/)?.[0] === location.zipCode;
+  }
+
+  return (
+    normalize(facility.city) === normalize(location.city) &&
+    getStateCode(facility.state) === location.stateCode
+  );
 }
 
 export function resolveFacilityCoordinates(facility: FacilityLocation): Coordinates | null {
