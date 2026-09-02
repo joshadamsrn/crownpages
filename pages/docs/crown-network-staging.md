@@ -72,9 +72,10 @@ centroid, and sort nearest-first when distance is active.
 
 The family-facing price control is a single maximum monthly budget. It compares
 that budget with `network_facilities.price_low` (falling back to `price_high`
-when no starting rate is supplied). Records without a known public price are
-excluded only when a family applies the budget filter. Staff can maintain
-coordinates, consumer price ranges, and billing periods from
+when no starting rate is supplied). Records above the maximum are excluded.
+Records without a known public price remain visible as `Contact for pricing`
+after matching priced providers so families do not lose potentially suitable
+options. Staff can maintain coordinates, consumer price ranges, and billing periods from
 `/protected/network-facilities`; referral compensation remains separate.
 
 The PHN import stores ZIP-derived coordinates and its public price range in the

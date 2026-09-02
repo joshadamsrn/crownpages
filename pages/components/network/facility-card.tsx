@@ -21,7 +21,7 @@ export function FacilityCard({ facility }: { facility: NetworkFacility }) {
         ? `From ${currency.format(facility.priceLow)}${pricePeriod}`
         : facility.priceHigh !== null
           ? `Up to ${currency.format(facility.priceHigh)}${pricePeriod}`
-          : null;
+          : "Contact for pricing";
 
   return (
     <article className={styles.card}>
@@ -59,12 +59,10 @@ export function FacilityCard({ facility }: { facility: NetworkFacility }) {
             {facility.about || facility.shortDescription || "Explore this provider's services and community information."}
           </p>
 
-          {price ? (
-            <div className={styles.cardPrice}>
-              <WalletCards aria-hidden="true" />
-              <span>{price}</span>
-            </div>
-          ) : null}
+          <div className={styles.cardPrice}>
+            <WalletCards aria-hidden="true" />
+            <span>{price}</span>
+          </div>
 
           {facility.careTypes.length > 0 ? (
             <div className={styles.tags} aria-label="Care types">

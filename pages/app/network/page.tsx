@@ -159,7 +159,8 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
 
             <p className={styles.filterHint}>
               <MapPin aria-hidden="true" />
-              Enter a city or ZIP to use distance. Budget matches each community&apos;s starting monthly price.
+              Enter a city or ZIP to use distance. Budget matches published starting prices; communities
+              without public pricing remain available after priced matches.
             </p>
           </div>
         </form>
@@ -192,7 +193,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
                 ) : location.status === "exact" ? (
                   <span>In {location.label}</span>
                 ) : null}
-                {priceSummary ? <span>Starting price {priceSummary}</span> : null}
+                {priceSummary ? <span>Published starting price {priceSummary}; unknown prices also shown</span> : null}
               </div>
             ) : null}
           </div>

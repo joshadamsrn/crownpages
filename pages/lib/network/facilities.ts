@@ -356,8 +356,10 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
 
       if (priceMax !== null) {
         const facilityLow = facility.priceLow ?? facility.priceHigh;
-        if (facilityLow === null) return false;
-        if (priceMax !== null && facilityLow > priceMax) return false;
+        // Keep providers without a published price discoverable. Their cards
+        // are clearly labeled "Contact for pricing" and sort after providers
+        // whose advertised starting price is within the family's budget.
+        if (facilityLow !== null && facilityLow > priceMax) return false;
       }
 
       if (!query || resolvedQueryLocation) return true;
@@ -379,6 +381,12 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
       return searchable.includes(query);
     })
     .sort((left, right) => {
+      if (priceMax !== null) {
+        const leftHasPrice = left.priceLow !== null || left.priceHigh !== null;
+        const rightHasPrice = right.priceLow !== null || right.priceHigh !== null;
+        if (leftHasPrice !== rightHasPrice) return leftHasPrice ? -1 : 1;
+      }
+
       if (searchLocation) {
         if (left.distanceMiles === null) return 1;
         if (right.distanceMiles === null) return -1;
