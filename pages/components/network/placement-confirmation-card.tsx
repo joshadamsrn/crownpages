@@ -104,7 +104,9 @@ export function PlacementConfirmationCard({
           ? `${money(facility.feeTerms.flatAmount)} flat fee`
           : feeType === "percentage"
             ? `${facility.feeTerms.percentage ?? 0}% of reported placement value`
-            : "Custom fee entered at confirmation"}
+            : feeType === "none"
+              ? "Non-compensated referral — no fee due"
+              : "Custom fee entered at confirmation"}
         {facility.protectionExpiresAt
           ? ` · protected through ${new Date(facility.protectionExpiresAt).toLocaleDateString()}`
           : ""}
@@ -121,9 +123,8 @@ export function PlacementConfirmationCard({
         }
         size="sm"
       >
-        Confirm placement and create fee
+        {feeType === "none" ? "Confirm placement" : "Confirm placement and create fee"}
       </Button>
     </div>
   );
 }
-

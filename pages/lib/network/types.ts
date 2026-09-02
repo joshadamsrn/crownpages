@@ -18,6 +18,10 @@ export function isNetworkInsuranceCareType(value: string): boolean {
   return (NETWORK_INSURANCE_CARE_TYPES as readonly string[]).includes(value);
 }
 
+export function isNetworkInsuranceOnlyCareTypes(values: readonly string[]) {
+  return values.length > 0 && values.every(isNetworkInsuranceCareType);
+}
+
 export type NetworkPricePeriod = "hour" | "day" | "week" | "month";
 
 export type NetworkFacility = {

@@ -45,6 +45,7 @@ The repeatable database files are:
 - `supabase/tests/crown_network_staging_fixture.sql`
 - `supabase/tests/crown_network_smoke.sql`
 - `supabase/tests/crown_network_facility_onboarding_smoke.sql`
+- `supabase/tests/crown_network_non_compensated_referral_smoke.sql`
 - `supabase/tests/crown_network_placement_fee_smoke.sql`
 
 The facility onboarding workflow is available at
@@ -55,10 +56,17 @@ provider notification routing, agreement terms, and referral activation.
 A facility is deliverable only when it has all of the following:
 
 - a visible, published profile;
-- an active and currently effective referral agreement;
+- either an active referral agreement or an explicitly non-compensated,
+  insurance-only referral arrangement;
 - an eligible referral status and the accepting-referrals switch enabled;
 - at least one supported care type; and
 - a valid operational notification email.
+
+The non-compensated path is limited to facilities whose selected care types are
+exclusively Skilled Nursing, Home Health, and/or Hospice. It requires no fee,
+agreement dates, or terms version, and remains fully auditable through referral
+delivery and placement confirmation. Private-pay care types continue to require
+an active agreement and complete fee terms.
 
 The onboarding schema is added by
 `supabase/migrations/20260901020000_add_network_facility_onboarding.sql`.

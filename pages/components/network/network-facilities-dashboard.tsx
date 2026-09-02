@@ -30,7 +30,11 @@ import type {
   NetworkFacilityReferralStatus,
 } from "@/lib/network/admin-facility-types";
 import { isNetworkFacilityReferralEligible } from "@/lib/network/facility-eligibility";
-import { NETWORK_CARE_TYPES, type NetworkCareType } from "@/lib/network/types";
+import {
+  NETWORK_CARE_TYPES,
+  isNetworkInsuranceOnlyCareTypes,
+  type NetworkCareType,
+} from "@/lib/network/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -96,7 +100,10 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
     const needle = query.trim().toLowerCase();
     return facilities.filter((facility) => {
       if (statusFilter === "active" && !facility.isReferralEligible) return false;
-      if (statusFilter === "needs_agreement" && facility.agreementStatus === "active") return false;
+      if (
+        statusFilter === "needs_agreement" &&
+        (facility.agreementStatus === "active" || facility.referralFeeType === "none")
+      ) return false;
       if (statusFilter === "paused" && facility.referralStatus !== "paused") return false;
       if (!needle) return true;
       return [facility.name, facility.city, facility.state, facility.sourceFacilityId]
@@ -109,12 +116,16 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
 
   const activeCount = facilities.filter((facility) => facility.isReferralEligible).length;
   const pendingCount = facilities.filter((facility) => facility.agreementStatus === "pending").length;
+  const draftIsInsuranceOnly = draft ? isNetworkInsuranceOnlyCareTypes(draft.careTypes) : false;
+  const draftIsNonCompensated = draft?.referralFeeType === "none";
   const draftIsReferralEligible = draft
     ? isNetworkFacilityReferralEligible({
         listing_status: draft.listingStatus,
         referral_status: draft.referralStatus,
         is_accepting_referrals: draft.isAcceptingReferrals,
+        care_types: draft.careTypes,
         agreement_status: draft.agreementStatus,
+        referral_fee_type: draft.referralFeeType,
         notification_email: draft.notificationEmail,
         agreement_effective_at: draft.agreementEffectiveAt,
         agreement_expires_at: draft.agreementExpiresAt,
@@ -127,6 +138,26 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
   };
   const patchDraft = (updates: Partial<NetworkAdminFacility>) => {
     setDraft((current) => (current ? { ...current, ...updates } : current));
+  };
+  const setReferralFeeType = (referralFeeType: NetworkFacilityFeeType | null) => {
+    if (referralFeeType === "none") {
+      patchDraft({
+        referralFeeType,
+        referralFeeAmount: null,
+        referralFeePercentage: null,
+        agreementStatus: "not_contacted",
+        agreementEffectiveAt: null,
+        agreementExpiresAt: null,
+        referralTermsVersion: null,
+      });
+      return;
+    }
+    patchDraft({
+      referralFeeType,
+      ...(draftIsNonCompensated
+        ? { referralStatus: "paused", isAcceptingReferrals: false }
+        : {}),
+    });
   };
 
   const refreshFacilities = async (preferredId?: string | null) => {
@@ -251,7 +282,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
               <select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm" onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
                 <option value="all">All participation statuses</option>
                 <option value="active">Referral ready</option>
-                <option value="needs_agreement">Needs active agreement</option>
+                <option value="needs_agreement">Needs referral terms</option>
                 <option value="paused">Paused</option>
               </select>
               <div className="text-xs text-slate-500">{filteredFacilities.length} facilities</div>
@@ -263,7 +294,18 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                     <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-900">{facility.name}</div><div className="mt-1 truncate text-xs text-slate-500">{[facility.city, facility.state].filter(Boolean).join(", ") || "Location unavailable"}</div></div>
                     {facility.isReferralEligible ? <BadgeCheck className="h-5 w-5 shrink-0 text-emerald-600" /> : null}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5"><Badge className={agreementBadgeClass(facility.agreementStatus)} variant="outline">{titleCase(facility.agreementStatus)}</Badge><Badge variant="outline">{titleCase(facility.referralStatus)}</Badge></div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {facility.referralFeeType === "none" ? (
+                      <Badge className="border-sky-200 bg-sky-50 text-sky-800" variant="outline">
+                        No referral fee
+                      </Badge>
+                    ) : (
+                      <Badge className={agreementBadgeClass(facility.agreementStatus)} variant="outline">
+                        {titleCase(facility.agreementStatus)}
+                      </Badge>
+                    )}
+                    <Badge variant="outline">{titleCase(facility.referralStatus)}</Badge>
+                  </div>
                 </button>
               ))}
               {!filteredFacilities.length ? <div className="p-6 text-center text-sm text-slate-500">No facilities match these filters.</div> : null}
@@ -286,7 +328,30 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-950"><ShieldCheck className="h-5 w-5 text-amber-600" /> Participation</div>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       <label className="space-y-1.5 text-xs font-semibold text-slate-600">Listing status<select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" onChange={(event) => { const listingStatus = event.target.value as NetworkFacilityListingStatus; patchDraft({ listingStatus, ...(listingStatus === "hidden" ? { referralStatus: "paused", isAcceptingReferrals: false } : {}) }); }} value={draft.listingStatus}><option value="listed">Listed</option><option value="verified">Verified</option><option value="partner">Partner</option><option value="hidden">Hidden</option></select></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Agreement status<select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" onChange={(event) => { const agreementStatus = event.target.value as NetworkFacilityAgreementStatus; patchDraft({ agreementStatus, ...(agreementStatus !== "active" ? { referralStatus: "paused", isAcceptingReferrals: false } : {}) }); }} value={draft.agreementStatus}><option value="not_contacted">Not contacted</option><option value="pending">Pending</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">
+                        Agreement status
+                        <select
+                          className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+                          disabled={draftIsNonCompensated}
+                          onChange={(event) => {
+                            const agreementStatus = event.target.value as NetworkFacilityAgreementStatus;
+                            patchDraft({
+                              agreementStatus,
+                              ...(agreementStatus !== "active"
+                                ? { referralStatus: "paused", isAcceptingReferrals: false }
+                                : {}),
+                            });
+                          }}
+                          value={draft.agreementStatus}
+                        >
+                          <option value="not_contacted">
+                            {draftIsNonCompensated ? "Not required" : "Not contacted"}
+                          </option>
+                          <option value="pending">Pending</option>
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </label>
                       <label className="space-y-1.5 text-xs font-semibold text-slate-600">Referral status<select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" onChange={(event) => { const referralStatus = event.target.value as NetworkFacilityReferralStatus; patchDraft({ referralStatus, ...(referralStatus !== "eligible" ? { isAcceptingReferrals: false } : {}) }); }} value={draft.referralStatus}><option value="disabled">Disabled</option><option value="paused">Paused</option><option value="eligible">Eligible</option></select></label>
                       <label className="flex items-center gap-3 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800"><Checkbox checked={draft.isAcceptingReferrals} onCheckedChange={(checked) => patchDraft({ isAcceptingReferrals: checked === true })} /> Accepting referrals</label>
                     </div>
@@ -296,7 +361,30 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                   <div className="rounded-2xl border border-slate-200 p-5">
                     <div className="text-sm font-bold text-slate-950">Care types</div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      {NETWORK_CARE_TYPES.map((careType) => <label className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700" key={careType}><Checkbox checked={draft.careTypes.includes(careType)} onCheckedChange={(checked) => { const next = checked === true ? [...draft.careTypes, careType] : draft.careTypes.filter((item) => item !== careType); patchDraft({ careTypes: next as NetworkCareType[] }); }} /> {careType}</label>)}
+                      {NETWORK_CARE_TYPES.map((careType) => (
+                        <label className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700" key={careType}>
+                          <Checkbox
+                            checked={draft.careTypes.includes(careType)}
+                            onCheckedChange={(checked) => {
+                              const next = checked === true
+                                ? [...draft.careTypes, careType]
+                                : draft.careTypes.filter((item) => item !== careType);
+                              const remainsInsuranceOnly = isNetworkInsuranceOnlyCareTypes(next);
+                              patchDraft({
+                                careTypes: next as NetworkCareType[],
+                                ...(draftIsNonCompensated && !remainsInsuranceOnly
+                                  ? {
+                                      referralFeeType: null,
+                                      referralStatus: "paused",
+                                      isAcceptingReferrals: false,
+                                    }
+                                  : {}),
+                              });
+                            }}
+                          />
+                          {careType}
+                        </label>
+                      ))}
                     </div>
                   </div>
 
@@ -326,22 +414,55 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
 
                 <div className="space-y-5">
                   <div className="rounded-2xl border border-slate-200 p-5">
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-950"><CircleDollarSign className="h-5 w-5 text-amber-600" /> Agreement terms</div>
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-950"><CircleDollarSign className="h-5 w-5 text-amber-600" /> Referral arrangement</div>
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Fee model<select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900" onChange={(event) => patchDraft({ referralFeeType: (event.target.value || null) as NetworkFacilityFeeType | null })} value={draft.referralFeeType || ""}><option value="">Not set</option><option value="flat">Flat fee</option><option value="percentage">Percentage</option><option value="custom">Custom terms</option></select></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Protection window<Input min={1} max={730} onChange={(event) => patchDraft({ referralProtectionDays: Number(event.target.value) || 1 })} type="number" value={draft.referralProtectionDays} /></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Flat fee ($)<Input min={0} onChange={(event) => patchDraft({ referralFeeAmount: nullableNumber(event.target.value) })} step="0.01" type="number" value={numberInputValue(draft.referralFeeAmount)} /></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Percentage (%)<Input min={0.01} max={100} onChange={(event) => patchDraft({ referralFeePercentage: nullableNumber(event.target.value) })} step="0.01" type="number" value={numberInputValue(draft.referralFeePercentage)} /></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Effective date<Input onChange={(event) => patchDraft({ agreementEffectiveAt: event.target.value || null })} type="date" value={dateInputValue(draft.agreementEffectiveAt)} /></label>
-                      <label className="space-y-1.5 text-xs font-semibold text-slate-600">Expiration date<Input onChange={(event) => patchDraft({ agreementExpiresAt: event.target.value || null })} type="date" value={dateInputValue(draft.agreementExpiresAt)} /></label>
+                      <label className="space-y-1.5 text-xs font-semibold text-slate-600 sm:col-span-2">
+                        Referral fee model
+                        <select
+                          className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900"
+                          onChange={(event) => setReferralFeeType((event.target.value || null) as NetworkFacilityFeeType | null)}
+                          value={draft.referralFeeType || ""}
+                        >
+                          <option value="">Not set</option>
+                          <option disabled={!draftIsInsuranceOnly} value="none">
+                            No referral fee — insurance-covered services
+                          </option>
+                          <option value="flat">Flat fee</option>
+                          <option value="percentage">Percentage</option>
+                          <option value="custom">Custom terms</option>
+                        </select>
+                      </label>
+                      {!draftIsNonCompensated ? (
+                        <>
+                          <label className="space-y-1.5 text-xs font-semibold text-slate-600">Protection window<Input min={1} max={730} onChange={(event) => patchDraft({ referralProtectionDays: Number(event.target.value) || 1 })} type="number" value={draft.referralProtectionDays} /></label>
+                          <label className="space-y-1.5 text-xs font-semibold text-slate-600">Flat fee ($)<Input min={0} onChange={(event) => patchDraft({ referralFeeAmount: nullableNumber(event.target.value) })} step="0.01" type="number" value={numberInputValue(draft.referralFeeAmount)} /></label>
+                          <label className="space-y-1.5 text-xs font-semibold text-slate-600">Percentage (%)<Input min={0.01} max={100} onChange={(event) => patchDraft({ referralFeePercentage: nullableNumber(event.target.value) })} step="0.01" type="number" value={numberInputValue(draft.referralFeePercentage)} /></label>
+                          <label className="space-y-1.5 text-xs font-semibold text-slate-600">Effective date<Input onChange={(event) => patchDraft({ agreementEffectiveAt: event.target.value || null })} type="date" value={dateInputValue(draft.agreementEffectiveAt)} /></label>
+                          <label className="space-y-1.5 text-xs font-semibold text-slate-600">Expiration date<Input onChange={(event) => patchDraft({ agreementExpiresAt: event.target.value || null })} type="date" value={dateInputValue(draft.agreementExpiresAt)} /></label>
+                        </>
+                      ) : null}
                     </div>
-                    <div className="mt-4 space-y-1.5"><Label htmlFor="terms-version">Terms version</Label><Input id="terms-version" onChange={(event) => patchDraft({ referralTermsVersion: event.target.value || null })} placeholder="e.g. crown-network-2026-v1" value={draft.referralTermsVersion || ""} /></div>
-                    <div className="mt-4 space-y-1.5"><Label htmlFor="agreement-notes">Agreement notes</Label><textarea className="min-h-28 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" id="agreement-notes" maxLength={4000} onChange={(event) => patchDraft({ agreementNotes: event.target.value || null })} placeholder="Document custom terms, exceptions, or contract context." value={draft.agreementNotes || ""} /></div>
+                    {draftIsNonCompensated ? (
+                      <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+                        <div className="font-bold">Non-compensated insurance referral</div>
+                        <p className="mt-1 text-xs leading-5">
+                          No facility payment, referral fee, agreement, effective date, or terms version is
+                          required. This option is limited to Skilled Nursing, Home Health, and Hospice.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-4 space-y-1.5"><Label htmlFor="terms-version">Terms version</Label><Input id="terms-version" onChange={(event) => patchDraft({ referralTermsVersion: event.target.value || null })} placeholder="e.g. crown-network-2026-v1" value={draft.referralTermsVersion || ""} /></div>
+                    )}
+                    <div className="mt-4 space-y-1.5"><Label htmlFor="agreement-notes">Internal notes</Label><textarea className="min-h-28 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" id="agreement-notes" maxLength={4000} onChange={(event) => patchDraft({ agreementNotes: event.target.value || null })} placeholder="Document agreement terms, compliance exceptions, or referral context." value={draft.agreementNotes || ""} /></div>
                   </div>
 
                   <div className={cn("rounded-2xl border p-4 text-sm", draftIsReferralEligible ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-slate-50 text-slate-700")}>
                     <div className="font-bold">{draftIsReferralEligible ? "This facility is referral ready" : "Referral readiness is incomplete"}</div>
-                    <p className="mt-1 text-xs leading-5">A deliverable facility needs a visible listing, active and currently effective agreement, eligible status, notification email, and the accepting-referrals switch.</p>
+                    <p className="mt-1 text-xs leading-5">
+                      {draftIsNonCompensated
+                        ? "A free-referral facility needs a visible listing, insurance-covered care types only, eligible status, a notification email, and the accepting-referrals switch."
+                        : "A compensated facility needs a visible listing, active and currently effective agreement, eligible status, notification email, and the accepting-referrals switch."}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -36,7 +36,7 @@ export type NetworkReferralPlacement = {
 export type NetworkReferralFee = {
   id: string;
   status: NetworkReferralFeeStatus;
-  feeType: "flat" | "percentage" | "custom";
+  feeType: "none" | "flat" | "percentage" | "custom";
   amount: number;
   currency: string;
   invoiceReference: string | null;
@@ -63,7 +63,7 @@ export type NetworkAdminReferralFacility = {
   notificationError: string | null;
   protectionExpiresAt: string | null;
   feeTerms: {
-    feeType: "flat" | "percentage" | "custom" | null;
+    feeType: "none" | "flat" | "percentage" | "custom" | null;
     flatAmount: number | null;
     percentage: number | null;
     termsVersion: string | null;

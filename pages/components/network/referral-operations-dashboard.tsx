@@ -446,12 +446,21 @@ export function ReferralOperationsDashboard({
                           <PlacementConfirmationCard
                             disabled={Boolean(pendingAction)}
                             facility={facility}
-                            onConfirm={(details) => runAction("mark_placed", facility.facilityId, "Placement confirmed and fee created", details)}
+                            onConfirm={(details) => runAction(
+                              "mark_placed",
+                              facility.facilityId,
+                              facility.feeTerms.feeType === "none"
+                                ? "Non-compensated placement confirmed"
+                                : "Placement confirmed and fee created",
+                              details,
+                            )}
                           />
                         ) : null}
                         {facility.fee ? (
                           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
-                            Referral fee: {new Intl.NumberFormat("en-US", { style: "currency", currency: facility.fee.currency }).format(facility.fee.amount)} · {titleCase(facility.fee.status)}
+                            {facility.fee.feeType === "none"
+                              ? "Non-compensated referral · No fee due"
+                              : <>Referral fee: {new Intl.NumberFormat("en-US", { style: "currency", currency: facility.fee.currency }).format(facility.fee.amount)} · {titleCase(facility.fee.status)}</>}
                           </div>
                         ) : null}
                       </div>

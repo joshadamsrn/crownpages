@@ -24,6 +24,7 @@ export async function getNetworkAdminFees(): Promise<NetworkAdminFee[]> {
     .from("network_referral_fees")
     .select("id,placement_id,referral_facility_id,status,fee_type,amount,currency,calculation_basis,invoice_reference,invoiced_at,due_at,paid_at,disputed_at,waived_at,notes,created_at,updated_at")
     .order("created_at", { ascending: false })
+    .neq("fee_type", "none")
     .limit(500);
 
   if (feeError) throw new Error(feeError.message);
@@ -112,4 +113,3 @@ export async function getNetworkAdminFees(): Promise<NetworkAdminFee[]> {
     } satisfies NetworkAdminFee];
   });
 }
-

@@ -186,6 +186,7 @@ export async function getNetworkAdminReferrals(): Promise<NetworkAdminReferral[]
       protectionExpiresAt: recipient.protection_expires_at,
       feeTerms: {
         feeType:
+          recipient.referral_fee_type_snapshot === "none" ||
           recipient.referral_fee_type_snapshot === "flat" ||
           recipient.referral_fee_type_snapshot === "percentage" ||
           recipient.referral_fee_type_snapshot === "custom"
@@ -213,7 +214,7 @@ export async function getNetworkAdminReferrals(): Promise<NetworkAdminReferral[]
         ? {
             id: fee.id,
             status: fee.status as NetworkReferralFeeStatus,
-            feeType: fee.fee_type as "flat" | "percentage" | "custom",
+            feeType: fee.fee_type as "none" | "flat" | "percentage" | "custom",
             amount: asNumber(fee.amount) ?? 0,
             currency: fee.currency,
             invoiceReference: fee.invoice_reference,

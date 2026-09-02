@@ -53,6 +53,7 @@ type RawNetworkFacility = {
   care_types: string[] | null;
   amenities: string[] | null;
   agreement_status: string;
+  referral_fee_type: string | null;
   notification_email: string | null;
   agreement_effective_at: string | null;
   agreement_expires_at: string | null;
@@ -261,7 +262,7 @@ const getAllImportedFacilities = cache(async (): Promise<NetworkFacility[]> => {
     const { data: facilityData, error: facilityError } = await supabase
       .from("network_facilities")
       .select(
-        "id,page_id,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,amenities,agreement_status,notification_email,agreement_effective_at,agreement_expires_at,latitude,longitude,price_low,price_high,price_period,accepted_insurances",
+        "id,page_id,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,amenities,agreement_status,referral_fee_type,notification_email,agreement_effective_at,agreement_expires_at,latitude,longitude,price_low,price_high,price_period,accepted_insurances",
       )
       .in("listing_status", ["listed", "verified", "partner"])
       .limit(1000);

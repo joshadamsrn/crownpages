@@ -4,7 +4,11 @@ import type { NetworkAdminFacilitySettings } from "@/lib/network/admin-facility-
 import { getNetworkAdminFacilities } from "@/lib/network/admin-facilities";
 import { isNetworkReferralsEnabled } from "@/lib/network/config";
 import { hasValidRequestOrigin } from "@/lib/network/request-origin";
-import { NETWORK_CARE_TYPES, type NetworkCareType } from "@/lib/network/types";
+import {
+  NETWORK_CARE_TYPES,
+  isNetworkInsuranceOnlyCareTypes,
+  type NetworkCareType,
+} from "@/lib/network/types";
 import { hasCrownAdminAccess } from "@/lib/organization-utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +18,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LISTING_STATUSES = new Set(["listed", "verified", "partner", "hidden"]);
 const REFERRAL_STATUSES = new Set(["disabled", "eligible", "paused"]);
 const AGREEMENT_STATUSES = new Set(["not_contacted", "pending", "active", "inactive"]);
-const FEE_TYPES = new Set(["flat", "percentage", "custom"]);
+const FEE_TYPES = new Set(["none", "flat", "percentage", "custom"]);
 const PRICE_PERIODS = new Set(["hour", "day", "week", "month"]);
 const CARE_TYPES = new Set<string>(NETWORK_CARE_TYPES);
 
@@ -92,10 +96,23 @@ function validateSettings(body: unknown):
   ) {
     return { success: false, error: "Enter up to 100 unique insurance plans, one per line." };
   }
+  const isNonCompensatedReferral = referralFeeType === "none";
+  if (isNonCompensatedReferral && !isNetworkInsuranceOnlyCareTypes(careTypes)) {
+    return {
+      success: false,
+      error: "No-fee referrals are available only when every selected care type is insurance-covered.",
+    };
+  }
+  const normalizedAgreementStatus = isNonCompensatedReferral ? "not_contacted" : agreementStatus;
+  const normalizedReferralFeeAmount = isNonCompensatedReferral ? null : referralFeeAmount;
+  const normalizedReferralFeePercentage = isNonCompensatedReferral ? null : referralFeePercentage;
+  const normalizedAgreementEffectiveAt = isNonCompensatedReferral ? null : agreementEffectiveAt;
+  const normalizedAgreementExpiresAt = isNonCompensatedReferral ? null : agreementExpiresAt;
+  const normalizedReferralTermsVersion = isNonCompensatedReferral ? null : referralTermsVersion;
   if (typeof protectionDays !== "number" || !Number.isInteger(protectionDays) || protectionDays < 1 || protectionDays > 730) {
     return { success: false, error: "Referral protection must be between 1 and 730 days." };
   }
-  if (referralFeeAmount === undefined || referralFeePercentage === undefined || agreementEffectiveAt === undefined || agreementExpiresAt === undefined || referralTermsVersion === undefined || agreementNotes === undefined || latitude === undefined || longitude === undefined || priceLow === undefined || priceHigh === undefined || pricePeriod === undefined) {
+  if (normalizedReferralFeeAmount === undefined || normalizedReferralFeePercentage === undefined || normalizedAgreementEffectiveAt === undefined || normalizedAgreementExpiresAt === undefined || normalizedReferralTermsVersion === undefined || agreementNotes === undefined || latitude === undefined || longitude === undefined || priceLow === undefined || priceHigh === undefined || pricePeriod === undefined) {
     return { success: false, error: "One or more facility settings are invalid." };
   }
   if ((latitude === null) !== (longitude === null)) {
@@ -119,32 +136,32 @@ function validateSettings(body: unknown):
   if ((priceLow !== null || priceHigh !== null) && pricePeriod === null) {
     return { success: false, error: "Choose a billing period for the public price range." };
   }
-  if (referralFeeAmount !== null && referralFeeAmount < 0) {
+  if (normalizedReferralFeeAmount !== null && normalizedReferralFeeAmount < 0) {
     return { success: false, error: "The flat referral fee cannot be negative." };
   }
-  if (referralFeePercentage !== null && (referralFeePercentage <= 0 || referralFeePercentage > 100)) {
+  if (normalizedReferralFeePercentage !== null && (normalizedReferralFeePercentage <= 0 || normalizedReferralFeePercentage > 100)) {
     return { success: false, error: "The referral percentage must be greater than 0 and no more than 100." };
   }
-  if (agreementEffectiveAt && agreementExpiresAt && new Date(agreementExpiresAt) <= new Date(agreementEffectiveAt)) {
+  if (normalizedAgreementEffectiveAt && normalizedAgreementExpiresAt && new Date(normalizedAgreementExpiresAt) <= new Date(normalizedAgreementEffectiveAt)) {
     return { success: false, error: "The agreement expiration must be after its effective date." };
   }
 
   const accepting = value.isAcceptingReferrals === true;
-  if (agreementStatus === "active") {
-    if (!referralFeeType || !agreementEffectiveAt || !referralTermsVersion) {
+  if (normalizedAgreementStatus === "active") {
+    if (!referralFeeType || !normalizedAgreementEffectiveAt || !normalizedReferralTermsVersion) {
       return { success: false, error: "Active agreements require fee terms, an effective date, and a terms version." };
     }
-    if (referralFeeType === "flat" && (!referralFeeAmount || referralFeeAmount <= 0)) {
+    if (referralFeeType === "flat" && (!normalizedReferralFeeAmount || normalizedReferralFeeAmount <= 0)) {
       return { success: false, error: "Enter the active agreement's flat referral fee." };
     }
-    if (referralFeeType === "percentage" && (!referralFeePercentage || referralFeePercentage <= 0)) {
+    if (referralFeeType === "percentage" && (!normalizedReferralFeePercentage || normalizedReferralFeePercentage <= 0)) {
       return { success: false, error: "Enter the active agreement's referral percentage." };
     }
     if (referralFeeType === "custom" && !agreementNotes) {
       return { success: false, error: "Describe the custom referral terms in the agreement notes." };
     }
   }
-  if (referralStatus === "eligible" && agreementStatus !== "active") {
+  if (referralStatus === "eligible" && !isNonCompensatedReferral && normalizedAgreementStatus !== "active") {
     return { success: false, error: "Only facilities with an active agreement can be referral eligible." };
   }
   if (referralStatus === "eligible" && (listingStatus === "hidden" || careTypes.length === 0)) {
@@ -153,10 +170,10 @@ function validateSettings(body: unknown):
   if (accepting && (referralStatus !== "eligible" || !notificationEmail)) {
     return { success: false, error: "Accepting facilities must be eligible and have a notification email." };
   }
-  if (accepting && agreementEffectiveAt && new Date(agreementEffectiveAt) > new Date()) {
+  if (accepting && normalizedAgreementEffectiveAt && new Date(normalizedAgreementEffectiveAt) > new Date()) {
     return { success: false, error: "The agreement must be effective before referrals can be accepted." };
   }
-  if (accepting && agreementExpiresAt && new Date(agreementExpiresAt) <= new Date()) {
+  if (accepting && normalizedAgreementExpiresAt && new Date(normalizedAgreementExpiresAt) <= new Date()) {
     return { success: false, error: "Renew the expired agreement before accepting referrals." };
   }
 
@@ -174,14 +191,14 @@ function validateSettings(body: unknown):
       priceHigh,
       pricePeriod: pricePeriod as NetworkAdminFacilitySettings["pricePeriod"],
       notificationEmail,
-      agreementStatus: agreementStatus as NetworkAdminFacilitySettings["agreementStatus"],
+      agreementStatus: normalizedAgreementStatus as NetworkAdminFacilitySettings["agreementStatus"],
       referralFeeType: referralFeeType as NetworkAdminFacilitySettings["referralFeeType"],
-      referralFeeAmount,
-      referralFeePercentage,
+      referralFeeAmount: normalizedReferralFeeAmount,
+      referralFeePercentage: normalizedReferralFeePercentage,
       referralProtectionDays: protectionDays,
-      agreementEffectiveAt,
-      agreementExpiresAt,
-      referralTermsVersion,
+      agreementEffectiveAt: normalizedAgreementEffectiveAt,
+      agreementExpiresAt: normalizedAgreementExpiresAt,
+      referralTermsVersion: normalizedReferralTermsVersion,
       agreementNotes,
     },
   };

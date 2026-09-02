@@ -134,7 +134,7 @@ export async function POST(
     if (confirmationError || typeof feeId !== "string") {
       console.error("Unable to confirm Crown Network placement", confirmationError);
       return NextResponse.json(
-        { error: "The placement could not be confirmed. Verify the move-in and fee details." },
+        { error: "The placement could not be confirmed. Verify the move-in and referral details." },
         { status: 409 },
       );
     }
@@ -145,7 +145,7 @@ export async function POST(
     const { data: facility, error: facilityError } = await admin
       .from("network_facilities")
       .select(
-        "business_id,page_id,notification_email,listing_status,referral_status,is_accepting_referrals,agreement_status,agreement_effective_at,agreement_expires_at",
+        "business_id,page_id,notification_email,listing_status,referral_status,is_accepting_referrals,care_types,agreement_status,referral_fee_type,agreement_effective_at,agreement_expires_at",
       )
       .eq("id", facilityId)
       .maybeSingle();
@@ -155,7 +155,7 @@ export async function POST(
 
     if (action === "deliver" && !isNetworkFacilityReferralEligible(facility)) {
       return NextResponse.json(
-        { error: "This provider does not have an active, currently eligible referral agreement." },
+        { error: "This provider is not currently eligible to receive Crown Network referrals." },
         { status: 409 },
       );
     }

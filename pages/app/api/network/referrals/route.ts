@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   const { data: eligibleFacilities, error: eligibleFacilitiesError } = await admin
     .from("network_facilities")
     .select(
-      "page_id,listing_status,referral_status,is_accepting_referrals,agreement_status,notification_email,agreement_effective_at,agreement_expires_at",
+      "page_id,listing_status,referral_status,is_accepting_referrals,care_types,agreement_status,referral_fee_type,notification_email,agreement_effective_at,agreement_expires_at",
     )
     .in("page_id", validation.data.facilityIds);
 

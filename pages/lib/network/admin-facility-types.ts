@@ -3,7 +3,7 @@ import type { NetworkCareType, NetworkPricePeriod } from "@/lib/network/types";
 export type NetworkFacilityListingStatus = "listed" | "verified" | "partner" | "hidden";
 export type NetworkFacilityReferralStatus = "disabled" | "eligible" | "paused";
 export type NetworkFacilityAgreementStatus = "not_contacted" | "pending" | "active" | "inactive";
-export type NetworkFacilityFeeType = "flat" | "percentage" | "custom";
+export type NetworkFacilityFeeType = "none" | "flat" | "percentage" | "custom";
 
 export type NetworkAdminFacility = {
   id: string;

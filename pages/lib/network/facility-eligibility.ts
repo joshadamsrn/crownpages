@@ -1,8 +1,12 @@
+import { isNetworkInsuranceOnlyCareTypes } from "@/lib/network/types";
+
 export type ReferralEligibilityFields = {
   listing_status: string;
   referral_status: string;
   is_accepting_referrals: boolean;
+  care_types: string[] | null;
   agreement_status: string;
+  referral_fee_type: string | null;
   notification_email: string | null;
   agreement_effective_at: string | null;
   agreement_expires_at: string | null;
@@ -20,15 +24,19 @@ export function isNetworkFacilityReferralEligible(
   const expiresAt = facility.agreement_expires_at
     ? new Date(facility.agreement_expires_at)
     : null;
+  const isNonCompensatedInsuranceReferral =
+    facility.referral_fee_type === "none" &&
+    isNetworkInsuranceOnlyCareTypes(facility.care_types ?? []);
+  const hasEligibleAgreement =
+    facility.agreement_status === "active" &&
+    (!effectiveAt || (!Number.isNaN(effectiveAt.valueOf()) && effectiveAt <= now)) &&
+    (!expiresAt || (!Number.isNaN(expiresAt.valueOf()) && expiresAt > now));
 
   return (
     ["listed", "verified", "partner"].includes(facility.listing_status) &&
     facility.referral_status === "eligible" &&
     facility.is_accepting_referrals &&
-    facility.agreement_status === "active" &&
     Boolean(facility.notification_email && EMAIL_PATTERN.test(facility.notification_email)) &&
-    (!effectiveAt || (!Number.isNaN(effectiveAt.valueOf()) && effectiveAt <= now)) &&
-    (!expiresAt || (!Number.isNaN(expiresAt.valueOf()) && expiresAt > now))
+    (isNonCompensatedInsuranceReferral || hasEligibleAgreement)
   );
 }
-
