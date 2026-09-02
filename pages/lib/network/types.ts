@@ -10,7 +10,13 @@ export const NETWORK_CARE_TYPES = [
   "Transportation",
 ] as const;
 
+export const NETWORK_INSURANCE_CARE_TYPES = ["Skilled Nursing", "Home Health"] as const;
+
 export type NetworkCareType = (typeof NETWORK_CARE_TYPES)[number];
+
+export function isNetworkInsuranceCareType(value: string): boolean {
+  return (NETWORK_INSURANCE_CARE_TYPES as readonly string[]).includes(value);
+}
 
 export type NetworkPricePeriod = "hour" | "day" | "week" | "month";
 
@@ -39,6 +45,7 @@ export type NetworkFacility = {
   priceLow: number | null;
   priceHigh: number | null;
   pricePeriod: NetworkPricePeriod | null;
+  acceptedInsurances: string[];
   distanceMiles: number | null;
   legacyFacilityId: string | null;
   isReferralEligible: boolean;
@@ -50,5 +57,6 @@ export type NetworkFacilityFilters = {
   state?: string;
   radiusMiles?: number;
   priceMax?: number;
+  insurance?: string;
   limit?: number;
 };

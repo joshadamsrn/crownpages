@@ -61,6 +61,7 @@ type RawNetworkFacility = {
   price_low: number | string | null;
   price_high: number | string | null;
   price_period: string | null;
+  accepted_insurances: string[] | null;
 };
 
 function asObject(value: unknown): JsonObject | null {
@@ -194,6 +195,9 @@ function mapPageToFacility(
     priceLow: asNumber(networkFacility?.price_low),
     priceHigh: asNumber(networkFacility?.price_high),
     pricePeriod: asPricePeriod(networkFacility?.price_period),
+    acceptedInsurances: (networkFacility?.accepted_insurances ?? [])
+      .map(asString)
+      .filter((insurance): insurance is string => Boolean(insurance)),
     distanceMiles: null,
     legacyFacilityId: networkFacility?.source_facility_id || asString(importSource?.facilityId),
     isReferralEligible: networkFacility
@@ -257,7 +261,7 @@ const getAllImportedFacilities = cache(async (): Promise<NetworkFacility[]> => {
     const { data: facilityData, error: facilityError } = await supabase
       .from("network_facilities")
       .select(
-        "id,page_id,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,amenities,agreement_status,notification_email,agreement_effective_at,agreement_expires_at,latitude,longitude,price_low,price_high,price_period",
+        "id,page_id,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,amenities,agreement_status,notification_email,agreement_effective_at,agreement_expires_at,latitude,longitude,price_low,price_high,price_period,accepted_insurances",
       )
       .in("listing_status", ["listed", "verified", "partner"])
       .limit(1000);
@@ -312,6 +316,7 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
       : null;
   const priceMax =
     typeof filters.priceMax === "number" && filters.priceMax >= 0 ? filters.priceMax : null;
+  const insurance = filters.insurance?.trim().toLowerCase() || "";
   const resolvedQueryLocation = queryText
     ? resolveNetworkSearchLocation(queryText, filters.state?.trim() || "", facilities)
     : null;
@@ -360,6 +365,13 @@ export async function searchNetworkFacilities(filters: NetworkFacilityFilters = 
         // are clearly labeled "Contact for pricing" and sort after providers
         // whose advertised starting price is within the family's budget.
         if (facilityLow !== null && facilityLow > priceMax) return false;
+      }
+
+      if (
+        insurance &&
+        !facility.acceptedInsurances.some((plan) => plan.toLowerCase().includes(insurance))
+      ) {
+        return false;
       }
 
       if (!query || resolvedQueryLocation) return true;
@@ -434,6 +446,20 @@ export async function getNetworkStates() {
   return Array.from(
     new Set(facilities.map((facility) => facility.state).filter((state): state is string => Boolean(state))),
   ).sort((a, b) => a.localeCompare(b));
+}
+
+export async function getNetworkInsuranceOptions() {
+  const facilities = await getAllImportedFacilities();
+  const options = new Map<string, string>();
+
+  for (const facility of facilities) {
+    for (const insurance of facility.acceptedInsurances) {
+      const normalized = insurance.trim();
+      if (normalized) options.set(normalized.toLowerCase(), normalized);
+    }
+  }
+
+  return Array.from(options.values()).sort((a, b) => a.localeCompare(b));
 }
 
 export async function getReferralEligiblePageIds() {

@@ -26,6 +26,7 @@ export type NetworkAdminFacility = {
   priceLow: number | null;
   priceHigh: number | null;
   pricePeriod: NetworkPricePeriod | null;
+  acceptedInsurances: string[];
   notificationEmail: string | null;
   agreementStatus: NetworkFacilityAgreementStatus;
   referralFeeType: NetworkFacilityFeeType | null;
@@ -51,6 +52,7 @@ export type NetworkAdminFacilitySettings = Pick<
   | "priceLow"
   | "priceHigh"
   | "pricePeriod"
+  | "acceptedInsurances"
   | "notificationEmail"
   | "agreementStatus"
   | "referralFeeType"

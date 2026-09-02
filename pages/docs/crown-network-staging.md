@@ -64,8 +64,8 @@ Staff changes are recorded in `network_facility_events`.
 
 ## Family directory filters
 
-The public directory at `/network` supports care type, state, proximity, and
-public price filtering. A family can enter a five-digit U.S. ZIP code or a city
+The public directory at `/network` supports care type, state, proximity,
+public price, and accepted-insurance filtering. A family can enter a five-digit U.S. ZIP code or a city
 with a state and then choose a 5, 10, 25, 50, or 100 mile radius. Results use
 stored facility coordinates when present, fall back to the facility ZIP
 centroid, and sort nearest-first when distance is active.
@@ -77,6 +77,14 @@ Records without a known public price remain visible as `Contact for pricing`
 after matching priced providers so families do not lose potentially suitable
 options. Staff can maintain coordinates, consumer price ranges, and billing periods from
 `/protected/network-facilities`; referral compensation remains separate.
+
+Skilled Nursing and Home Health searches replace the monthly-budget control
+with an accepted-insurance field. Families can enter a plan such as Medicare,
+Medicaid, Aetna, or Select Health. Matching is case-insensitive against the
+structured `network_facilities.accepted_insurances` list. Insurance
+participation, coverage, and prior-authorization requirements must still be
+confirmed directly with the provider. Staff can maintain one plan per line in
+the facility operations dashboard.
 
 The PHN import stores ZIP-derived coordinates and its public price range in the
 page import metadata. `sync_phn_network_facilities()` copies those values into

@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { ArrowRight, Compass, DollarSign, MapPin, Search } from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 import { FacilityCard } from "@/components/network/facility-card";
-import { searchNetworkFacilities, getNetworkStates } from "@/lib/network/facilities";
-import { NETWORK_CARE_TYPES } from "@/lib/network/types";
+import { NetworkSearchForm } from "@/components/network/network-search-form";
+import {
+  getNetworkInsuranceOptions,
+  getNetworkStates,
+  searchNetworkFacilities,
+} from "@/lib/network/facilities";
+import { isNetworkInsuranceCareType } from "@/lib/network/types";
 import styles from "./network.module.css";
 
 export const dynamic = "force-dynamic";
@@ -39,20 +44,24 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
   const careType = getParam(params, "care");
   const state = getParam(params, "state");
   const radiusMiles = getNumberParam(params, "radius", 500);
-  const priceMax = getNumberParam(params, "priceMax", 1_000_000);
-  const [{ facilities, total, location }, states] = await Promise.all([
+  const usesInsurance = isNetworkInsuranceCareType(careType);
+  const priceMax = usesInsurance ? undefined : getNumberParam(params, "priceMax", 1_000_000);
+  const insurance = usesInsurance ? getParam(params, "insurance") : "";
+  const [{ facilities, total, location }, states, insuranceOptions] = await Promise.all([
     searchNetworkFacilities({
       query,
       careType,
       state,
       radiusMiles,
       priceMax,
+      insurance,
       limit: 24,
     }),
     getNetworkStates(),
+    getNetworkInsuranceOptions(),
   ]);
   const hasFilters = Boolean(
-    query || careType || state || radiusMiles || priceMax !== undefined,
+    query || careType || state || radiusMiles || priceMax !== undefined || insurance,
   );
   const priceSummary = priceMax !== undefined ? `up to ${formatCurrency(priceMax)}` : null;
 
@@ -81,89 +90,16 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
       </section>
 
       <section className={styles.searchPanel} aria-label="Search care providers">
-        <form className={styles.searchForm} action="/network" method="get">
-          <div className={styles.primaryFilters}>
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>City, ZIP, or provider</span>
-              <span className={styles.field}>
-                <Search className={styles.fieldIcon} aria-hidden="true" />
-                <input
-                  className={styles.searchInput}
-                  defaultValue={query}
-                  name="q"
-                  placeholder="City, ZIP code, or provider name"
-                  type="search"
-                />
-              </span>
-            </label>
-
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Care type</span>
-              <select className={styles.select} defaultValue={careType} name="care">
-                <option value="">All care types</option>
-                {NETWORK_CARE_TYPES.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>State</span>
-              <select className={styles.select} defaultValue={state} name="state">
-                <option value="">All states</option>
-                {states.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button className={styles.searchButton} type="submit">
-              Search care
-            </button>
-          </div>
-
-          <div className={styles.advancedFilters}>
-            <div className={styles.filterHeading}>Narrow your results</div>
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Distance</span>
-              <select className={styles.select} defaultValue={radiusMiles ?? ""} name="radius">
-                <option value="">Any distance</option>
-                {[5, 10, 25, 50, 100].map((miles) => (
-                  <option key={miles} value={miles}>
-                    Within {miles} miles
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className={styles.fieldGroup}>
-              <span className={styles.fieldLabel}>Maximum monthly budget</span>
-              <span className={styles.moneyField}>
-                <DollarSign aria-hidden="true" />
-                <input
-                  className={styles.priceInput}
-                  defaultValue={priceMax}
-                  inputMode="numeric"
-                  min="0"
-                  name="priceMax"
-                  placeholder="Up to"
-                  step="100"
-                  type="number"
-                />
-              </span>
-            </label>
-
-            <p className={styles.filterHint}>
-              <MapPin aria-hidden="true" />
-              Enter a city or ZIP to use distance. Budget matches published starting prices; communities
-              without public pricing remain available after priced matches.
-            </p>
-          </div>
-        </form>
+        <NetworkSearchForm
+          careType={careType}
+          insurance={insurance}
+          insuranceOptions={insuranceOptions}
+          priceMax={priceMax}
+          query={query}
+          radiusMiles={radiusMiles}
+          state={state}
+          states={states}
+        />
         {location.status === "missing" ? (
           <p className={styles.searchNotice} role="status">
             Enter a city or ZIP code to apply the distance filter.
@@ -186,7 +122,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
               {total === 1 ? "1 listing" : `${total} listings`}
               {total > facilities.length ? ` · showing the first ${facilities.length}` : ""}
             </p>
-            {location.status === "resolved" || location.status === "exact" || priceSummary ? (
+            {location.status === "resolved" || location.status === "exact" || priceSummary || insurance ? (
               <div className={styles.appliedFilters} aria-label="Applied search filters">
                 {location.status === "resolved" ? (
                   <span>Within {radiusMiles} miles of {location.label}</span>
@@ -194,6 +130,7 @@ export default async function NetworkHome({ searchParams }: { searchParams: Sear
                   <span>In {location.label}</span>
                 ) : null}
                 {priceSummary ? <span>Published starting price {priceSummary}; unknown prices also shown</span> : null}
+                {insurance ? <span>Accepts {insurance}</span> : null}
               </div>
             ) : null}
           </div>

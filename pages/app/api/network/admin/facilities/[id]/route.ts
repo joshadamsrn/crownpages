@@ -74,6 +74,12 @@ function validateSettings(body: unknown):
         (careType): careType is NetworkCareType => typeof careType === "string" && CARE_TYPES.has(careType),
       )
     : null;
+  const acceptedInsurances = Array.isArray(value.acceptedInsurances)
+    ? value.acceptedInsurances
+        .filter((insurance): insurance is string => typeof insurance === "string")
+        .map((insurance) => insurance.trim())
+        .filter(Boolean)
+    : null;
 
   if (!LISTING_STATUSES.has(listingStatus)) return { success: false, error: "Choose a valid listing status." };
   if (!REFERRAL_STATUSES.has(referralStatus)) return { success: false, error: "Choose a valid referral status." };
@@ -86,6 +92,14 @@ function validateSettings(body: unknown):
   }
   if (!careTypes || careTypes.length !== new Set(careTypes).size) {
     return { success: false, error: "Choose valid, non-duplicated care types." };
+  }
+  if (
+    !acceptedInsurances ||
+    acceptedInsurances.length > 100 ||
+    acceptedInsurances.some((insurance) => insurance.length > 160) ||
+    acceptedInsurances.length !== new Set(acceptedInsurances.map((insurance) => insurance.toLowerCase())).size
+  ) {
+    return { success: false, error: "Enter up to 100 unique insurance plans, one per line." };
   }
   if (typeof protectionDays !== "number" || !Number.isInteger(protectionDays) || protectionDays < 1 || protectionDays > 730) {
     return { success: false, error: "Referral protection must be between 1 and 730 days." };
@@ -162,6 +176,7 @@ function validateSettings(body: unknown):
       referralStatus: referralStatus as NetworkAdminFacilitySettings["referralStatus"],
       isAcceptingReferrals: accepting,
       careTypes,
+      acceptedInsurances,
       latitude,
       longitude,
       priceLow,

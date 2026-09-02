@@ -52,6 +52,17 @@ function nullableNumber(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
+function parseInsuranceInput(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split("\n")
+        .map((insurance) => insurance.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -159,6 +170,7 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
       priceLow: draft.priceLow,
       priceHigh: draft.priceHigh,
       pricePeriod: draft.pricePeriod,
+      acceptedInsurances: draft.acceptedInsurances,
       notificationEmail: draft.notificationEmail,
       agreementStatus: draft.agreementStatus,
       referralFeeType: draft.referralFeeType,
@@ -298,6 +310,16 @@ export function NetworkFacilitiesDashboard({ initialFacilities, previewMode }: P
                       <label className="space-y-1.5 text-xs font-semibold text-slate-600">Latitude<Input max={90} min={-90} onChange={(event) => patchDraft({ latitude: nullableNumber(event.target.value) })} step="0.000001" type="number" value={numberInputValue(draft.latitude)} /></label>
                       <label className="space-y-1.5 text-xs font-semibold text-slate-600">Longitude<Input max={180} min={-180} onChange={(event) => patchDraft({ longitude: nullableNumber(event.target.value) })} step="0.000001" type="number" value={numberInputValue(draft.longitude)} /></label>
                     </div>
+                    <label className="mt-4 block space-y-1.5 text-xs font-semibold text-slate-600">
+                      Accepted insurance plans
+                      <textarea
+                        className="min-h-36 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900"
+                        onChange={(event) => patchDraft({ acceptedInsurances: parseInsuranceInput(event.target.value) })}
+                        placeholder={"Medicare\nUtah Medicaid\nAetna"}
+                        value={draft.acceptedInsurances.join("\n")}
+                      />
+                    </label>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">Enter one plan per line. These plans power the family-facing insurance filter for Skilled Nursing and Home Health searches.</p>
                     <p className="mt-3 text-xs leading-5 text-slate-500">These values power family-facing distance and price filters. They are separate from referral fee terms.</p>
                   </div>
                 </div>

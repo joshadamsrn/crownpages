@@ -26,6 +26,7 @@ type FacilityRow = {
   price_low: number | string | null;
   price_high: number | string | null;
   price_period: "hour" | "day" | "week" | "month" | null;
+  accepted_insurances: string[] | null;
   notification_email: string | null;
   agreement_status: string;
   referral_fee_type: string | null;
@@ -55,7 +56,7 @@ export async function getNetworkAdminFacilities(): Promise<NetworkAdminFacility[
   const { data, error } = await admin
     .from("network_facilities")
     .select(
-      "id,page_id,business_id,source_system,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,latitude,longitude,price_low,price_high,price_period,notification_email,agreement_status,referral_fee_type,referral_fee_amount,referral_fee_percentage,referral_protection_days,agreement_effective_at,agreement_expires_at,referral_terms_version,agreement_notes,updated_at",
+      "id,page_id,business_id,source_system,source_facility_id,listing_status,referral_status,is_accepting_referrals,care_types,latitude,longitude,price_low,price_high,price_period,accepted_insurances,notification_email,agreement_status,referral_fee_type,referral_fee_amount,referral_fee_percentage,referral_protection_days,agreement_effective_at,agreement_expires_at,referral_terms_version,agreement_notes,updated_at",
     )
     .order("updated_at", { ascending: false })
     .limit(1000);
@@ -107,6 +108,7 @@ export async function getNetworkAdminFacilities(): Promise<NetworkAdminFacility[
         priceLow: asNumber(facility.price_low),
         priceHigh: asNumber(facility.price_high),
         pricePeriod: facility.price_period,
+        acceptedInsurances: facility.accepted_insurances ?? [],
         notificationEmail: facility.notification_email,
         agreementStatus: facility.agreement_status as NetworkFacilityAgreementStatus,
         referralFeeType: facility.referral_fee_type as NetworkFacilityFeeType | null,

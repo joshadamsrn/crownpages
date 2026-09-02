@@ -12946,7 +12946,7 @@ Options:
   --update-existing       Update an existing owner-owned page instead of skipping it.
   --no-media-rows         Do not create CrownPages media library rows.
   --cover-media-only      Copy only the hero and logo; omit galleries and videos.
-  --network-metadata-only Update only existing pages' Network coordinates and pricing metadata.
+  --network-metadata-only Update only existing pages' Network coordinates, pricing, and insurance metadata.
   --json                  Print full planned records as JSON.
 `);
 }
@@ -13704,6 +13704,9 @@ function getNetworkDiscoveryMetadata(facility) {
     sourcePriceLow !== null && sourcePriceHigh !== null
       ? Math.max(sourcePriceLow, sourcePriceHigh)
       : sourcePriceHigh;
+  const acceptedInsurances = parseInsuranceList(facility.insurance_list).map(
+    (insurance) => insurance.name,
+  );
 
   return {
     latitude: coordinates?.isValid ? coordinates.latitude : null,
@@ -13711,6 +13714,7 @@ function getNetworkDiscoveryMetadata(facility) {
     priceLow,
     priceHigh,
     pricePeriod: priceLow !== null || priceHigh !== null ? "month" : null,
+    acceptedInsurances,
   };
 }
 
@@ -13862,6 +13866,8 @@ async function findPageByImportSource(crown, ownerId, facilityId) {
     .select("id,title,slug,business_id,content")
     .eq("created_by", ownerId)
     .eq("content->importSource->>facilityId", facilityId)
+    .eq("is_active", true)
+    .eq("is_published", true)
     .limit(1);
 
   if (error) throw error;
@@ -13884,6 +13890,7 @@ async function syncNetworkMetadataOnly(crown, owner, facilities, options) {
       pageId: page?.id || null,
       coordinates: network.latitude !== null && network.longitude !== null,
       price: network.priceLow !== null || network.priceHigh !== null,
+      insurancePlans: network.acceptedInsurances.length,
       network,
       skipped: !page,
       reason: page ? null : "No matching imported CrownPages profile",
@@ -13922,6 +13929,7 @@ async function syncNetworkMetadataOnly(crown, owner, facilities, options) {
     skipped: plans.filter((plan) => plan.skipped).length,
     withCoordinates: plans.filter((plan) => !plan.skipped && plan.coordinates).length,
     withPrice: plans.filter((plan) => !plan.skipped && plan.price).length,
+    withInsurance: plans.filter((plan) => !plan.skipped && plan.insurancePlans > 0).length,
     plans,
   };
 
@@ -13937,6 +13945,7 @@ async function syncNetworkMetadataOnly(crown, owner, facilities, options) {
   console.log(`Matched profiles: ${summary.matched}`);
   console.log(`With coordinates: ${summary.withCoordinates}`);
   console.log(`With pricing: ${summary.withPrice}`);
+  console.log(`With insurance: ${summary.withInsurance}`);
   console.log(`Skipped: ${summary.skipped}`);
 }
 
